@@ -6,3 +6,7 @@ scala:
 notifications:
   email:
     - kexin.xie@salesforce.com
+
+branches:
+  only:
+    - master
