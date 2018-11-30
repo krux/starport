@@ -1,0 +1,8 @@
+language: scala
+
+scala:
+  - 2.12.6
+
+notifications:
+  email:
+    - kexin.xie@salesforce.com
