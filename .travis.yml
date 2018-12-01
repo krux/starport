@@ -6,7 +6,6 @@ scala:
 notifications:
   email:
     - kexin.xie@salesforce.com
-
 branches:
   only:
     - master
@@ -14,3 +13,12 @@ branches:
 script:
   - sbt ++$TRAVIS_SCALA_VERSION test
   - sbt ++$TRAVIS_SCALA_VERSION core/assembly
+
+deploy:
+  provider: releases
+  skip_cleanup: true
+  api_key:
+    secure: M9NSeaU5nRbDKe4Ncrpeot1FDQyjdm4qPESvAyx3As8lHob+Uqwj2PSbO7v7AG8XV3OeUJRq2STbUNkJKqzW0Z68LRVcruJ1WaumgEZX3COupQOQcuqi3L6qzoH5ymdpxoxCxYhUrreS240hWWt6YHjwP8ySR8Zc6tw6M0Q1Vdoze5YYpVVr4IPLLy9fqt/zI0koBAYDP2ieRtbixcGIMYxB/c3srrkbozbgI/WuRKHxy53S1vsJV+HpYhWLHfME58gCG7kPAV51GLFnt2QlV6eTiISGzxCYvyi5YJQkMEX4tsrA92ekMg22bqktQBU+whN8Lj4S4z8tkjbdKXIKuDAP9AtJ5RKCvHXT2yGd8n9i27yUtHQ3IfVvPIkVlamo+AFC7W6CJYipQ076OLNwyRFfmuWt+TygKbKdjNE3npDpZVu0bK1WBAiEjSTCRJS8IoGZc31G3YETI9Rwv+EckAXMTYgIpekLMLF/9rUk6C5EiGT+5WZ47YXZwAF0Nr7vdq1slmxpkJ26M4vyuCOnSNYAoUSEZRA7f0fv750fV3m9VYgBBpgUoOffDzUahcsnDxB83D2T3l7iFqr6z0jAGzTxZmv2ZoULfJZefH3f/4BarIa1lXnRMrj/FSLPS3DWSeOoNG68/dvI9+qDIWpCloVl+bt+HwOcS8EA6zcRuMI=
+  file: starport-core/target/scala-2.12/starport-core.jar
+  on:
+    repo: krux/starport

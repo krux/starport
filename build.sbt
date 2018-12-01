@@ -38,6 +38,7 @@ lazy val core = (project in file("starport-core")).
     name := "starport-core",
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
     buildInfoPackage := "com.krux.starport",
+    assemblyJarName in assembly := "starport-core.jar",
     libraryDependencies ++= Seq(
       scalaTestArtifact,
       slickArtifact,
