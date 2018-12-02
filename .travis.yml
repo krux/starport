@@ -26,4 +26,3 @@ deploy:
   file: starport-core/target/scala-2.12/starport-core.jar
   on:
     repo: krux/starport
-    tags: true
