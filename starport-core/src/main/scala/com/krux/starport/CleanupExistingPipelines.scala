@@ -8,7 +8,7 @@ import com.krux.hyperion.client.{AwsClient, AwsClientForId}
 import com.krux.starport.db.record.FailedPipeline
 import com.krux.starport.db.table.{FailedPipelines, Pipelines, ScheduledPipelines}
 import com.krux.starport.metric.ConstantValueGauge
-import com.krux.starport.util.{AwsDataPipeline, PipelineState, ErrorHandler}
+import com.krux.starport.util.{AwsDataPipeline, ErrorHandler, HealthStatus, PipelineHistoryHelper, PipelineState}
 
 
 /**
@@ -22,7 +22,7 @@ object CleanupExistingPipelines extends StarportActivity {
   val metrics = new MetricRegistry()
 
   def activePipelineRecords(): Int = {
-    logger.info("Retriving active pipelines...")
+    logger.info("Retrieving active pipelines...")
 
     val query = Pipelines()
       .filter(_.isActive).size
@@ -128,6 +128,10 @@ object CleanupExistingPipelines extends StarportActivity {
             logger.info(s"insert ${failedPipeline.awsId} to failed pipelines")
             db.run(DBIO.seq(FailedPipelines() += failedPipeline)).waitForResult
           }
+
+        PipelineHistoryHelper.updatePipelineHistories(healthyPipelines, HealthStatus.SUCCESS)
+        PipelineHistoryHelper.updatePipelineHistories(failedPipelines, HealthStatus.FAILED)
+
       } catch {
         case e: Exception =>
           e.printStackTrace()

@@ -1,0 +1,27 @@
+package com.krux.starport.db.table
+
+import slick.jdbc.PostgresProfile.api._
+
+import com.krux.starport.db.record.PipelineDependency
+
+
+class PipelineDependencies(tag: Tag) extends Table[PipelineDependency](tag, "pipelineDependencies") {
+
+  def pipelineId = column[Int]("pipeline_id")
+
+  def dependentPipelineId = column[Int]("dependent_pipeline_id")
+
+  def * = (pipelineId, dependentPipelineId) <>
+    (PipelineDependency.tupled, PipelineDependency.unapply)
+
+  def pipeline = foreignKey("pipeline_dependencies_pipelines_fk", pipelineId, TableQuery[Pipelines])(
+    _.id, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Cascade)
+
+  def dependentPipeline = foreignKey("pipeline_dependencies_pipelines_dependency_fk", dependentPipelineId, TableQuery[Pipelines])(
+    _.id, onUpdate = ForeignKeyAction.Restrict, onDelete = ForeignKeyAction.Cascade)
+
+}
+
+object PipelineDependencies {
+  def apply() = TableQuery[PipelineDependencies]
+}

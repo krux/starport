@@ -5,6 +5,6 @@ import org.joda.time.DateTime
 
 case class SchedulerMetric(
   startTime: DateTime,
-  piplineCount: Option[Int] = None,
+  pipelineCount: Option[Int] = None,
   endTime: Option[DateTime] = None
 )

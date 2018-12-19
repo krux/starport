@@ -10,13 +10,13 @@ import com.codahale.metrics.MetricRegistry
 import com.github.nscala_time.time.Imports._
 import slick.jdbc.PostgresProfile.api._
 
-import com.krux.hyperion.client.{AwsClientForName, AwsClient}
+import com.krux.hyperion.client.{AwsClient, AwsClientForName}
 import com.krux.hyperion.expression.{Duration => HDuration}
-import com.krux.starport.cli.{SchedulerOptions, SchedulerOptionParser}
+import com.krux.starport.cli.{SchedulerOptionParser, SchedulerOptions}
 import com.krux.starport.db.record.{Pipeline, ScheduledPipeline, SchedulerMetric}
-import com.krux.starport.db.table.{ScheduledPipelines, Pipelines, SchedulerMetrics, ScheduleFailureCounters}
+import com.krux.starport.db.table.{PipelineDependencies, PipelineHistories, Pipelines, ScheduleFailureCounters, ScheduledPipelines, SchedulerMetrics}
 import com.krux.starport.metric.{ConstantValueGauge, SimpleTimerGauge}
-import com.krux.starport.util.{S3FileHandler, ErrorHandler}
+import com.krux.starport.util.{ErrorHandler, HealthStatus, PipelineHistoryHelper, S3FileHandler}
 
 
 object StartScheduledPipelines extends StarportActivity {
@@ -42,7 +42,7 @@ object StartScheduledPipelines extends StarportActivity {
     .toMap
 
   def pendingPipelineRecords(scheduledEnd: DateTime): Seq[Pipeline] = {
-    logger.info("Retriving pending pipelines..")
+    logger.info("Retrieving pending pipelines..")
 
     // get all jobs to be scheduled
     val query = Pipelines()
@@ -59,6 +59,35 @@ object StartScheduledPipelines extends StarportActivity {
     logger.info(s"Retrieved ${result.size} pending pipelines")
 
     result
+  }
+
+  def dependencyFinished(pipeline: Pipeline, nextRunTime: Option[DateTime]): Boolean = {
+    logger.info("Checking pipeline dependencies status..")
+
+    // get all jobs to be scheduled
+    val query = PipelineDependencies()
+      .filter(_.pipelineId === pipeline.id)
+      .take(conf.maxPipelines)
+
+    val dependencies = db.run(query.result).waitForResult
+
+    logger.info(s"Retrieved ${dependencies.size} dependencies")
+
+    if (dependencies.isEmpty) {
+      true
+    } else {
+      val dependentPipelineIds = dependencies.map(_.dependentPipelineId)
+      val dependencyHistoryQuery = PipelineHistories()
+        .filter(p => p.pipelineId.inSet(dependentPipelineIds))
+        .take(conf.maxPipelines)
+
+      val dependencyHistories = db.run(dependencyHistoryQuery.result).waitForResult
+
+      dependencyHistories.forall( p =>
+        (p.nextRunTime.isEmpty || nextRunTime.isEmpty || p.nextRunTime.get > nextRunTime.get) &&
+          p.status.equals(HealthStatus.SUCCESS.toString)
+      )
+    }
   }
 
   /**
@@ -202,7 +231,9 @@ object StartScheduledPipelines extends StarportActivity {
     val actualStart = options.actualStart
     db.run(DBIO.seq(SchedulerMetrics() += SchedulerMetric(actualStart))).waitForResult
 
-    val pipelineModels = pendingPipelineRecords(options.scheduledEnd)
+    val (pipelineModels, dependencyIncompletePipelines) = pendingPipelineRecords(options.scheduledEnd)
+      .partition(p => dependencyFinished(p, p.nextRunTime))
+
     db.run(DBIO.seq(
         SchedulerMetrics()
           .filter(_.startTime === actualStart)
@@ -226,7 +257,7 @@ object StartScheduledPipelines extends StarportActivity {
 
       val timerInst = scheduleTimer.time()
 
-      logger.info(s"deploying pipleine ${p.name}")
+      logger.info(s"deploying pipeline ${p.name}")
 
       val (status, output, pipelineName) = deployPipeline(
         p, options.scheduledStart, options.scheduledEnd, localJars(p.jar))
@@ -249,6 +280,7 @@ object StartScheduledPipelines extends StarportActivity {
       ))
       .waitForResult
 
+    PipelineHistoryHelper.addPipelineHistories(dependencyIncompletePipelines, HealthStatus.WAITING)
   }
 
   /**

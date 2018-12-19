@@ -9,7 +9,9 @@ trait Schema {
     ScheduledPipelines().schema ++
     FailedPipelines().schema ++
     SchedulerMetrics().schema ++
-    ScheduleFailureCounters().schema
+    ScheduleFailureCounters().schema ++
+    PipelineDependencies().schema ++
+    PipelineHistories().schema
 
 }
 
