@@ -76,9 +76,8 @@ object StartScheduledPipelines extends StarportActivity {
     if (dependencies.isEmpty) {
       true
     } else {
-      val dependentPipelineIds = dependencies.map(_.dependentPipelineId)
       val dependencyHistoryQuery = PipelineHistories()
-        .filter(p => p.pipelineId.inSet(dependentPipelineIds))
+        .filter(p => p.pipelineId.inSet(dependencies.map(_.dependentPipelineId).toSet))
         .take(conf.maxPipelines)
 
       val dependencyHistories = db.run(dependencyHistoryQuery.result).waitForResult

@@ -34,11 +34,9 @@ object PipelineHistoryHelper extends WaitForIt with Logging {
   def updatePipelineHistories(scheduledPipelineRecords: Seq[ScheduledPipeline], healthStatus: HealthStatus): Unit = {
     logger.info(s"Mark pipelines ${scheduledPipelineRecords.map(_.awsId).mkString(",")} as $healthStatus ...")
 
-    val pipelineIds = scheduledPipelineRecords.map(_.pipelineId)
-
     val query = Pipelines()
-      .filter(_.id.inSet(pipelineIds))
-      .take(pipelineIds.length)
+      .filter(_.id.inSet(scheduledPipelineRecords.map(_.pipelineId).toSet))
+      .take(scheduledPipelineRecords.length)
 
     val nextRunTimes = db.run(query.result).waitForResult.map(p => (p.id.get, p.nextRunTime)).toMap
 
