@@ -20,6 +20,8 @@ class PipelineDependencies(tag: Tag) extends Table[PipelineDependency](tag, "pip
   def dependentPipeline = foreignKey("pipeline_dependencies_pipelines_dependency_fk", dependentPipelineId, TableQuery[Pipelines])(
     _.id, onUpdate = ForeignKeyAction.Restrict, onDelete = ForeignKeyAction.Cascade)
 
+  def pk = primaryKey("pipeline_dependencies_pk", (pipelineId, dependentPipelineId))
+
 }
 
 object PipelineDependencies {

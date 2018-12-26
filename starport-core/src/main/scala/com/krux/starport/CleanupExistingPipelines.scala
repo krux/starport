@@ -60,9 +60,7 @@ object CleanupExistingPipelines extends StarportActivity {
       // TODO refactor the try
       try {
 
-        // TODO probably better to just use a different logger
-        val logPrefix = s"|PipelineId: ${pipelineId}|"
-        logger.info(s"$logPrefix has ${scheduledPipelines.size} in console pipelines.")
+        logger.info(s"${pipelineRecord.logPrefix} has ${scheduledPipelines.size} in console pipelines.")
 
         val pipelineStatuses = AwsDataPipeline.describePipeline(scheduledPipelines.map(_.awsId): _*)
 
@@ -70,14 +68,18 @@ object CleanupExistingPipelines extends StarportActivity {
           pipelineStatuses.get(p.awsId).flatMap(_.pipelineState) == Some(PipelineState.FINISHED)
         }
 
-        logger.info(s"$logPrefix has ${finishedPipelines.size} finished pipelines.")
+        logger.info(s"${pipelineRecord.logPrefix} has ${finishedPipelines.size} finished pipelines.")
 
         val (failedPipelines, healthyPipelines) = finishedPipelines.partition { p =>
           pipelineStatuses.get(p.awsId).flatMap(_.healthStatus) == Some("ERROR")
         }
 
-        logger.info(s"$logPrefix has ${failedPipelines.size} failed pipelines.")
-        logger.info(s"$logPrefix has ${healthyPipelines.size} healthy pipelines.")
+        logger.info(s"${pipelineRecord.logPrefix} has ${failedPipelines.size} failed pipelines.")
+        logger.info(s"${pipelineRecord.logPrefix} has ${healthyPipelines.size} healthy pipelines.")
+
+        val pipelineHistoryHelper = new PipelineHistoryHelper()
+        pipelineHistoryHelper.updatePipelineHistories(healthyPipelines, HealthStatus.SUCCESS)
+        pipelineHistoryHelper.updatePipelineHistories(failedPipelines, HealthStatus.FAILED)
 
         def deletePipelineAndUpdateDB(awsId: String): Unit = {
           // delete the pipeline from console then update the field in the database
@@ -99,7 +101,7 @@ object CleanupExistingPipelines extends StarportActivity {
           .drop(pipelineRecord.retention)
           .flatMap(_._2)
           .foreach { sp =>
-            logger.info(s"$logPrefix ask to delete ${sp.awsId}.")
+            logger.info(s"${pipelineRecord.logPrefix} ask to delete ${sp.awsId}.")
             deletePipelineAndUpdateDB(sp.awsId)
             deleteCounter.inc()
           }
@@ -128,9 +130,6 @@ object CleanupExistingPipelines extends StarportActivity {
             logger.info(s"insert ${failedPipeline.awsId} to failed pipelines")
             db.run(DBIO.seq(FailedPipelines() += failedPipeline)).waitForResult
           }
-
-        PipelineHistoryHelper.updatePipelineHistories(healthyPipelines, HealthStatus.SUCCESS)
-        PipelineHistoryHelper.updatePipelineHistories(failedPipelines, HealthStatus.FAILED)
 
       } catch {
         case e: Exception =>

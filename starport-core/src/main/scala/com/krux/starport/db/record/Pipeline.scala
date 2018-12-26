@@ -16,4 +16,7 @@ case class Pipeline(
   nextRunTime: Option[DateTime],
   backfill: Boolean,
   owner: Option[String]
-)
+) {
+
+  final val logPrefix = s"|PipelineId: $id|"
+}

@@ -10,9 +10,7 @@ import com.krux.starport.db.table.{PipelineHistories, Pipelines}
 import com.krux.starport.util.HealthStatus.HealthStatus
 
 
-object PipelineHistoryHelper extends WaitForIt with Logging {
-
-  implicit val conf = StarportSettings()
+class PipelineHistoryHelper(implicit conf: StarportSettings) extends WaitForIt with Logging {
 
   def db = conf.jdbc.db
 
@@ -27,7 +25,7 @@ object PipelineHistoryHelper extends WaitForIt with Logging {
       )
     }
 
-    val insertAction = DBIO.seq(PipelineHistories() ++= pipelineHistories)
+    val insertAction = DBIO.seq(PipelineHistories() ++= pipelineHistories).transactionally
     db.run(insertAction).waitForResult
   }
 
@@ -48,7 +46,7 @@ object PipelineHistoryHelper extends WaitForIt with Logging {
       )
     }
 
-    val insertAction = DBIO.seq(PipelineHistories() ++= pipelineHistories)
+    val insertAction = DBIO.seq(PipelineHistories() ++= pipelineHistories).transactionally
     db.run(insertAction).waitForResult
   }
 
