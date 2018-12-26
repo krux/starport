@@ -128,7 +128,7 @@ object CleanupExistingPipelines extends StarportActivity {
           .foreach { sp =>
             val failedPipeline = FailedPipeline(sp.awsId, sp.pipelineId, false, DateTime.now)
             logger.info(s"insert ${failedPipeline.awsId} to failed pipelines")
-            db.run(DBIO.seq(FailedPipelines() += failedPipeline)).waitForResult
+            db.run(DBIO.seq(FailedPipelines() += failedPipeline).transactionally).waitForResult
           }
 
       } catch {
