@@ -60,7 +60,7 @@ object CleanupExistingPipelines extends StarportActivity {
       // TODO refactor the try
       try {
 
-        logger.info(s"${pipelineRecord.logPrefix} has ${scheduledPipelines.size} in console pipelines.")
+        logger.info(s"${pipelineRecord.id} has ${scheduledPipelines.size} in console pipelines.")
 
         val pipelineStatuses = AwsDataPipeline.describePipeline(scheduledPipelines.map(_.awsId): _*)
 
@@ -68,14 +68,14 @@ object CleanupExistingPipelines extends StarportActivity {
           pipelineStatuses.get(p.awsId).flatMap(_.pipelineState) == Some(PipelineState.FINISHED)
         }
 
-        logger.info(s"${pipelineRecord.logPrefix} has ${finishedPipelines.size} finished pipelines.")
+        logger.info(s"Pipeline ${pipelineRecord.id} has ${finishedPipelines.size} finished pipelines.")
 
         val (failedPipelines, healthyPipelines) = finishedPipelines.partition { p =>
           pipelineStatuses.get(p.awsId).flatMap(_.healthStatus) == Some("ERROR")
         }
 
-        logger.info(s"${pipelineRecord.logPrefix} has ${failedPipelines.size} failed pipelines.")
-        logger.info(s"${pipelineRecord.logPrefix} has ${healthyPipelines.size} healthy pipelines.")
+        logger.info(s"Pipeline ${pipelineRecord.id} has ${failedPipelines.size} failed pipelines.")
+        logger.info(s"Pipeline ${pipelineRecord.id} has ${healthyPipelines.size} healthy pipelines.")
 
         import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -103,7 +103,7 @@ object CleanupExistingPipelines extends StarportActivity {
           .drop(pipelineRecord.retention)
           .flatMap(_._2)
           .foreach { sp =>
-            logger.info(s"${pipelineRecord.logPrefix} ask to delete ${sp.awsId}.")
+            logger.info(s"Pipeline ${pipelineRecord.id} ask to delete ${sp.awsId}.")
             deletePipelineAndUpdateDB(sp.awsId)
             deleteCounter.inc()
           }

@@ -66,7 +66,7 @@ object StartScheduledPipelines extends StarportActivity {
     * @return true if no dependency found or all dependencies are finished
     */
   def dependencyFinished(pipeline: Pipeline, nextRunTime: Option[DateTime]): Boolean = {
-    logger.info(s"${pipeline.logPrefix} checking pipeline dependencies ...")
+    logger.info(s"Pipeline ${pipeline.id} checking pipeline dependencies ...")
 
     // get all dependencies
     val query = PipelineDependencies()
@@ -74,7 +74,7 @@ object StartScheduledPipelines extends StarportActivity {
 
     val dependencies = db.run(query.result).waitForResult
 
-    logger.info(s"${pipeline.logPrefix} retrieved ${dependencies.size} dependencies")
+    logger.info(s"Pipeline ${pipeline.id} retrieved ${dependencies.size} dependencies")
 
     dependencies.isEmpty || {
       val dependencyHistoryQuery = PipelineHistories()
@@ -100,7 +100,7 @@ object StartScheduledPipelines extends StarportActivity {
       localJar: String
     ): (Int, String, String) = {
 
-    logger.info(s"${pipelineRecord.logPrefix} Deploying pipeline: ${pipelineRecord.name}")
+    logger.info(s"Pipeline ${pipelineRecord.id} Deploying pipeline: ${pipelineRecord.name}")
 
     val start = pipelineRecord.nextRunTime.get
     val until = pipelineRecord.end
@@ -116,7 +116,7 @@ object StartScheduledPipelines extends StarportActivity {
       if (pipelineRecord.backfill) timesTillEnd(start, until, HDuration(pipelinePeriod))
       else 1
 
-    logger.info(s"${pipelineRecord.logPrefix} calculatedTimes: $calculatedTimes")
+    logger.info(s"Pipeline ${pipelineRecord.id} calculatedTimes: $calculatedTimes")
     if (calculatedTimes < 1) {
       // the calculatedTimes should never be < 1
       logger.error(s"calculatedTimes < 1")
@@ -148,7 +148,7 @@ object StartScheduledPipelines extends StarportActivity {
       extraEnvs: _*
     )
 
-    logger.info(s"${pipelineRecord.logPrefix} Executing `${command.mkString(" ")}`")
+    logger.info(s"Pipeline ${pipelineRecord.id} Executing `${command.mkString(" ")}`")
 
     val outputBuilder = new StringBuilder
     val status = process ! ProcessLogger(line => outputBuilder.append(line + "\n"))
@@ -165,7 +165,7 @@ object StartScheduledPipelines extends StarportActivity {
       scheduledEnd: DateTime
     ) = {
 
-    logger.info(s"${pipelineRecord.logPrefix} Activating pipeline: $pipelineName...")
+    logger.info(s"Pipeline ${pipelineRecord.id} Activating pipeline: $pipelineName...")
 
     val awsClientForName = AwsClientForName(AwsClient.getClient(), pipelineName, conf.maxRetry)
     val pipelineIdNameMap = awsClientForName.pipelineIdNames
@@ -176,11 +176,11 @@ object StartScheduledPipelines extends StarportActivity {
           val activationStatus = if (client.activatePipelines().nonEmpty) {
             "success"
           } else {
-            logger.error(s"${pipelineRecord.logPrefix} Failed to activate pipeline ${client.pipelineIds}")
+            logger.error(s"Pipeline ${pipelineRecord.id} Failed to activate pipeline ${client.pipelineIds}")
             "fail"
           }
 
-          logger.info(s"${pipelineRecord.logPrefix} Register pipelines (${client.pipelineIds}) in database.")
+          logger.info(s"Pipeline ${pipelineRecord.id} Register pipelines (${client.pipelineIds}) in database.")
 
           val scheduledPipelineRecords = client.pipelineIds.map(awsId =>
             ScheduledPipeline(
@@ -198,19 +198,19 @@ object StartScheduledPipelines extends StarportActivity {
           val insertAction = DBIO.seq(ScheduledPipelines() ++= scheduledPipelineRecords).transactionally
           db.run(insertAction).waitForResult
 
-          logger.info(s"${pipelineRecord.logPrefix} updating the next run time")
+          logger.info(s"Pipeline ${pipelineRecord.id} updating the next run time")
 
           // update the next runtime in the database
           val newNextRunTime = nextRunTime(pipelineRecord.nextRunTime.get, HDuration(pipelineRecord.period), scheduledEnd)
           val updateQuery = Pipelines().filter(_.id === pipelineRecord.id).map(_.nextRunTime)
-          logger.debug(s"${pipelineRecord.logPrefix} Update with query ${updateQuery.updateStatement}")
+          logger.debug(s"Pipeline ${pipelineRecord.id} Update with query ${updateQuery.updateStatement}")
           val updateAction = updateQuery.update(Some(newNextRunTime))
           db.run(updateAction).waitForResult
 
           // activate successful, reset the failure counter, by deleting it
           db.run(ScheduleFailureCounters().filter(_.pipelineId === pipelineRecord.id.get).delete).waitForResult
 
-          logger.info(s"${pipelineRecord.logPrefix} Successfully scheduled pipeline $pipelineName")
+          logger.info(s"Pipeline ${pipelineRecord.id} Successfully scheduled pipeline $pipelineName")
         case None =>
           val errorMessage = s"pipeline with name $pipelineName not found"
           logger.error(errorMessage)
