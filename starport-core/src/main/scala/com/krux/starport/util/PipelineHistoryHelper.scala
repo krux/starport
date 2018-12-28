@@ -1,5 +1,7 @@
 package com.krux.starport.util
 
+import scala.concurrent.ExecutionContext
+
 import slick.jdbc.PostgresProfile.api._
 
 import com.krux.starport.Logging
@@ -29,25 +31,25 @@ class PipelineHistoryHelper(implicit conf: StarportSettings) extends WaitForIt w
     db.run(insertAction).waitForResult
   }
 
-  def updatePipelineHistories(scheduledPipelineRecords: Seq[ScheduledPipeline], healthStatus: HealthStatus): Unit = {
+  def updatePipelineHistories(scheduledPipelineRecords: Seq[ScheduledPipeline], healthStatus: HealthStatus)
+    (implicit ec: ExecutionContext): Unit = {
     logger.info(s"Mark pipelines ${scheduledPipelineRecords.map(_.awsId).mkString(",")} as $healthStatus ...")
 
-    val query = Pipelines()
-      .filter(_.id.inSet(scheduledPipelineRecords.map(_.pipelineId).toSet))
-      .take(scheduledPipelineRecords.length)
+    val actions = (
+      for {
+        pipelines <- Pipelines().filter(_.id.inSet(scheduledPipelineRecords.map(_.pipelineId).toSet)).result
+        nextRunTimes = pipelines.map(p => (p.id.get, p.nextRunTime)).toMap
+        pipelineHistories = scheduledPipelineRecords.map { p =>
+          PipelineHistory(
+            p.pipelineId,
+            nextRunTimes.getOrElse(p.pipelineId, None),
+            healthStatus.toString
+          )
+        }
+        result <- PipelineHistories() ++= pipelineHistories
+      } yield result).transactionally
 
-    val nextRunTimes = db.run(query.result).waitForResult.map(p => (p.id.get, p.nextRunTime)).toMap
-
-    val pipelineHistories = scheduledPipelineRecords.map { p =>
-      PipelineHistory(
-        p.pipelineId,
-        nextRunTimes.getOrElse(p.pipelineId, None),
-        healthStatus.toString
-      )
-    }
-
-    val insertAction = DBIO.seq(PipelineHistories() ++= pipelineHistories).transactionally
-    db.run(insertAction).waitForResult
+    db.run(actions).waitForResult
   }
 
 }

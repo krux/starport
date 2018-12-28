@@ -77,6 +77,8 @@ object CleanupExistingPipelines extends StarportActivity {
         logger.info(s"${pipelineRecord.logPrefix} has ${failedPipelines.size} failed pipelines.")
         logger.info(s"${pipelineRecord.logPrefix} has ${healthyPipelines.size} healthy pipelines.")
 
+        import scala.concurrent.ExecutionContext.Implicits.global
+
         val pipelineHistoryHelper = new PipelineHistoryHelper()
         pipelineHistoryHelper.updatePipelineHistories(healthyPipelines, HealthStatus.SUCCESS)
         pipelineHistoryHelper.updatePipelineHistories(failedPipelines, HealthStatus.FAILED)
