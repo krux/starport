@@ -23,6 +23,8 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
 
   private val ValidEmail = """^([a-zA-Z0-9.!#$%&’'*+/=?^_`{|}~-]+)@([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*)$""".r
 
+  lazy val starportSettings = StarportSettings()
+
   case class Options(
     jar: String = "",
     pipelineObject: String = "",
@@ -48,19 +50,21 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
     pipelineDef.getField("MODULE$").get(null).asInstanceOf[DataPipelineDefGroup].schedule.asInstanceOf[RecurringSchedule]
   }
 
-  private def sendSlackNotification(message: String) = {
-    logger.info("Sending Slack Notification")
-
-    SendSlackMessage(
-      webhookUrl = StarportSettings().slackWebhookURL,
-      message = Seq(
-        "Pipeline " + message,
-        ":robot_face: StarportScheduler",
-        "Requested By: " + System.getProperties().get("user.name").toString()
-      ),
-      user = Option("starport"),
-      channel = Option("#robots")
-    )
+  private def sendSlackNotification(message: String) = starportSettings.slackWebhookURL match {
+    case Some(webhook) =>
+      logger.info("Sending Slack Notification")
+      SendSlackMessage(
+        webhookUrl = webhook,
+        message = Seq(
+          "Pipeline " + message,
+          ":robot_face: StarportScheduler",
+          "Requested By: " + System.getProperties().get("user.name").toString()
+        ),
+        user = Option("starport"),
+        channel = Option("#robots")
+      )
+    case None =>
+      logger.warn("krux.starport.slack_webhook_url not configured, skip sending slack notification")
   }
 
   def main(args: Array[String]): Unit = {
@@ -150,7 +154,7 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
           println("Dry Run. Skip sending the querys...")
           dryRunOutput
         } else {
-          val db = StarportSettings().jdbc.db
+          val db = starportSettings.jdbc.db
           db.run(query).waitForResult
         }
       }
