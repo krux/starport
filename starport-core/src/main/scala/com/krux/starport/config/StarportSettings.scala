@@ -4,11 +4,12 @@ import java.net.URL
 
 import scala.collection.JavaConverters._
 import scala.collection.{Map => IMap}
+import scala.util.Try
 
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
 
-import com.krux.starport.net.StarportURLStreamHandlerFactory
 import com.krux.starport.metric.MetricSettings
+import com.krux.starport.net.StarportURLStreamHandlerFactory
 
 
 class StarportSettings(val config: Config) extends Serializable {
@@ -35,7 +36,7 @@ class StarportSettings(val config: Config) extends Serializable {
       v.unwrapped.asInstanceOf[String]
     }
 
-  val slackWebhookURL: String = config.getString("krux.starport.slack_webhook_url")
+  val slackWebhookURL: Option[String] = Try(config.getString("krux.starport.slack_webhook_url")).toOption
 
 }
 
