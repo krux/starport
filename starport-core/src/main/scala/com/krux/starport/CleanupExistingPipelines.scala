@@ -49,8 +49,9 @@ object CleanupExistingPipelines extends StarportActivity {
 
     val deleteCounter = metrics.counter("counters.pipeline_deleted")
 
-    // delete the in console pipelines that no longer need to be there (keep the most x recent
-    // success/error piplines, where x is the retention value in db)
+    // 1) delete the in console pipelines that no longer need to be there (keep the most x recent
+    //    success/error piplines, where x is the retention value in db)
+    // 2) mark pipeline success / failure status in pipeline histories
     inConsolePipelines.groupBy(_.pipelineId).par.foreach { case (pipelineId, scheduledPipelines) =>
 
       val pipelineRecord = db.run(Pipelines().filter(_.id === pipelineId).take(1).result)
@@ -130,7 +131,7 @@ object CleanupExistingPipelines extends StarportActivity {
           .foreach { sp =>
             val failedPipeline = FailedPipeline(sp.awsId, sp.pipelineId, false, DateTime.now)
             logger.info(s"insert ${failedPipeline.awsId} to failed pipelines")
-            db.run(DBIO.seq(FailedPipelines() += failedPipeline).transactionally).waitForResult
+            db.run(DBIO.seq(FailedPipelines() += failedPipeline)).waitForResult
           }
 
       } catch {

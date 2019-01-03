@@ -85,7 +85,7 @@ object StartScheduledPipelines extends StarportActivity {
 
       dependencyHistories.forall( p =>
         (p.nextRunTime.isEmpty || nextRunTime.isEmpty || p.nextRunTime.get > nextRunTime.get) &&
-          p.status.equals(HealthStatus.SUCCESS.toString)
+          p.status == HealthStatus.SUCCESS.toString
       )
     }
   }
@@ -195,7 +195,7 @@ object StartScheduledPipelines extends StarportActivity {
             )
           )
 
-          val insertAction = DBIO.seq(ScheduledPipelines() ++= scheduledPipelineRecords).transactionally
+          val insertAction = DBIO.seq(ScheduledPipelines() ++= scheduledPipelineRecords)
           db.run(insertAction).waitForResult
 
           logger.info(s"Pipeline ${pipelineRecord.id} updating the next run time")
@@ -223,7 +223,7 @@ object StartScheduledPipelines extends StarportActivity {
     logger.info(s"run with options: $options")
 
     val actualStart = options.actualStart
-    db.run(DBIO.seq(SchedulerMetrics() += SchedulerMetric(actualStart)).transactionally).waitForResult
+    db.run(DBIO.seq(SchedulerMetrics() += SchedulerMetric(actualStart))).waitForResult
 
     val (pipelineModels, dependencyIncompletePipelines) = pendingPipelineRecords(options.scheduledEnd)
       .partition(p => dependencyFinished(p, p.nextRunTime))
