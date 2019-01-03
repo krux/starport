@@ -8,7 +8,6 @@ import scala.util.Try
 
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
 
-import com.krux.starport.metric.MetricSettings
 import com.krux.starport.net.StarportURLStreamHandlerFactory
 
 
@@ -18,7 +17,8 @@ class StarportSettings(val config: Config) extends Serializable {
 
   val starportNotificationSns = config.getString("krux.starport.notification.sns")
 
-  val metricSettings: MetricSettings = new MetricSettings(config.getConfig("krux.starport.metric.graphite"))
+  val metricSettings: Option[Config] =
+    Try(config.getConfig("krux.starport.metric.graphite")).toOption
 
   val jdbc: JdbcConfig = JdbcConfig(config.getConfig("krux.starport.jdbc"))
 
