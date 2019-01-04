@@ -5,7 +5,7 @@ import slick.jdbc.PostgresProfile.api._
 import com.krux.starport.db.record.PipelineDependency
 
 
-class PipelineDependencies(tag: Tag) extends Table[PipelineDependency](tag, "pipelineDependencies") {
+class PipelineDependencies(tag: Tag) extends Table[PipelineDependency](tag, "pipeline_dependencies") {
 
   def pipelineId = column[Int]("pipeline_id")
 
