@@ -1,7 +1,7 @@
-create table "pipelineDependencies" ("pipeline_id" INTEGER NOT NULL,"dependent_pipeline_id" INTEGER NOT NULL);
+create table "pipeline_dependencies" ("pipeline_id" INTEGER NOT NULL,"dependent_pipeline_id" INTEGER NOT NULL);
 
-alter table "pipelineDependencies" add constraint "pipeline_dependencies_pipelines_dependency_fk" foreign key("dependent_pipeline_id") references "pipelines"("id") on update RESTRICT on delete CASCADE;
-alter table "pipelineDependencies" add constraint "pipeline_dependencies_pipelines_fk" foreign key("pipeline_id") references "pipelines"("id") on update RESTRICT on delete CASCADE;
+alter table "pipeline_dependencies" add constraint "pipeline_dependencies_pipelines_dependency_fk" foreign key("dependent_pipeline_id") references "pipelines"("id") on update RESTRICT on delete CASCADE;
+alter table "pipeline_dependencies" add constraint "pipeline_dependencies_pipelines_fk" foreign key("pipeline_id") references "pipelines"("id") on update RESTRICT on delete CASCADE;
 
 create table "pipeline_histories" ("pipeline_id" INTEGER NOT NULL,"next_run_time" TIMESTAMP,"status" VARCHAR(40) NOT NULL);
 
