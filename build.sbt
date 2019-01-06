@@ -63,7 +63,6 @@ lazy val core = (project in file("starport-core")).
 
 lazy val lambda = (project in file("starport-lambda")).
   settings(commonSettings: _*).
-  enablePlugins(BuildInfoPlugin).
   settings(
     name := "starport-lambda",
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
@@ -74,4 +73,4 @@ lazy val lambda = (project in file("starport-lambda")).
       awsLambdaEvents,
     ),
     fork := true
-  )
+  ).dependsOn(core)
