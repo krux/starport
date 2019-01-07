@@ -17,6 +17,9 @@ import com.krux.starport.db.record.{Pipeline, ScheduledPipeline, SchedulerMetric
 import com.krux.starport.db.table.{PipelineDependencies, PipelineHistories, Pipelines, ScheduleFailureCounters, ScheduledPipelines, SchedulerMetrics}
 import com.krux.starport.metric.{ConstantValueGauge, SimpleTimerGauge}
 import com.krux.starport.util.{ErrorHandler, HealthStatus, PipelineHistoryHelper, S3FileHandler}
+import com.krux.starport.db.table.{ScheduledPipelines, Pipelines, SchedulerMetrics, ScheduleFailureCounters}
+import com.krux.starport.metric.{ConstantValueGauge, SimpleTimerGauge, MetricSettings}
+import com.krux.starport.util.{S3FileHandler, ErrorHandler}
 
 
 object StartScheduledPipelines extends StarportActivity {
@@ -286,7 +289,7 @@ object StartScheduledPipelines extends StarportActivity {
     val mainTimer = new SimpleTimerGauge(TimeUnit.MINUTES)
     metrics.register("gauges.runtime", mainTimer)
 
-    val reporter = conf.metricSettings.getReporter(metrics)
+    val reporter = MetricSettings.getReporter(conf.metricSettings, metrics)
 
     try {
       SchedulerOptionParser.parse(args) match {

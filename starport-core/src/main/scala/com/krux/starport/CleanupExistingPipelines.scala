@@ -7,6 +7,8 @@ import slick.jdbc.PostgresProfile.api._
 import com.krux.hyperion.client.{AwsClient, AwsClientForId}
 import com.krux.starport.db.record.FailedPipeline
 import com.krux.starport.db.table.{FailedPipelines, Pipelines, ScheduledPipelines}
+import com.krux.starport.metric.{ConstantValueGauge, MetricSettings}
+import com.krux.starport.util.{AwsDataPipeline, PipelineState, ErrorHandler}
 import com.krux.starport.metric.ConstantValueGauge
 import com.krux.starport.util.{AwsDataPipeline, ErrorHandler, HealthStatus, PipelineHistoryHelper, PipelineState}
 
@@ -154,7 +156,7 @@ object CleanupExistingPipelines extends StarportActivity {
 
   def main(args: Array[String]): Unit = {
 
-    val reporter = conf.metricSettings.getReporter(metrics)
+    val reporter = MetricSettings.getReporter(conf.metricSettings, metrics)
 
     val start = System.nanoTime
     try {
