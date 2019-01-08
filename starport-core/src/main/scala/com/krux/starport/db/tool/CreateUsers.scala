@@ -1,13 +1,14 @@
 package com.krux.starport.db.tool
 
-import com.krux.starport.config.StarportSettings
-import com.krux.starport.Logging
-import com.krux.starport.db.WaitForIt
-import com.krux.starport.db.table._
 import com.typesafe.config.ConfigValueFactory
 import scopt.OptionParser
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.PostgresProfile.backend.DatabaseDef
+
+import com.krux.starport.Logging
+import com.krux.starport.config.StarportSettings
+import com.krux.starport.db.WaitForIt
+import com.krux.starport.db.table._
 
 object CreateUsers extends App with Logging with WaitForIt with Schema {
 
