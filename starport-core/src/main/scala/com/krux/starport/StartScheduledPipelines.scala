@@ -14,12 +14,9 @@ import com.krux.hyperion.client.{AwsClient, AwsClientForName}
 import com.krux.hyperion.expression.{Duration => HDuration}
 import com.krux.starport.cli.{SchedulerOptionParser, SchedulerOptions}
 import com.krux.starport.db.record.{Pipeline, ScheduledPipeline, SchedulerMetric}
-import com.krux.starport.db.table.{PipelineDependencies, PipelineHistories, Pipelines, ScheduleFailureCounters, ScheduledPipelines, SchedulerMetrics}
-import com.krux.starport.metric.{ConstantValueGauge, SimpleTimerGauge}
-import com.krux.starport.util.{ErrorHandler, HealthStatus, PipelineHistoryHelper, S3FileHandler}
-import com.krux.starport.db.table.{ScheduledPipelines, Pipelines, SchedulerMetrics, ScheduleFailureCounters}
-import com.krux.starport.metric.{ConstantValueGauge, SimpleTimerGauge, MetricSettings}
-import com.krux.starport.util.{S3FileHandler, ErrorHandler}
+import com.krux.starport.db.table.{PipelineDependencies, PipelineProgresses, Pipelines, ScheduleFailureCounters, ScheduledPipelines, SchedulerMetrics}
+import com.krux.starport.metric.{ConstantValueGauge, MetricSettings, SimpleTimerGauge}
+import com.krux.starport.util.{ErrorHandler, PipelineProgressHelper, ProgressStatus, S3FileHandler}
 
 
 object StartScheduledPipelines extends StarportActivity {
@@ -74,22 +71,25 @@ object StartScheduledPipelines extends StarportActivity {
     // get all dependencies
     val query = PipelineDependencies()
       .filter(_.pipelineId === pipeline.id)
+      .map(_.dependentPipelineId)
 
-    val dependencies = db.run(query.result).waitForResult
+    val dependencies = db.run(query.result).waitForResult.toSet
 
     logger.info(s"Pipeline ${pipeline.id} retrieved ${dependencies.size} dependencies")
 
     dependencies.isEmpty || {
-      val dependencyHistoryQuery = PipelineHistories()
-        .filter(p => p.pipelineId.inSet(dependencies.map(_.dependentPipelineId).toSet))
-        .take(conf.maxPipelines)
+      val dependencyProgressQuery = PipelineProgresses()
+        .filter(p => p.pipelineId.inSet(dependencies))
+      val dependencyProgresses = db.run(dependencyProgressQuery.result).waitForResult
 
-      val dependencyHistories = db.run(dependencyHistoryQuery.result).waitForResult
+      val dependencyNextRuntimeQuery = Pipelines().filter(_.id.inSet(dependencies)).map(_.nextRunTime)
+      val dependencyNextRuntimes = db.run(dependencyNextRuntimeQuery.result).waitForResult
 
-      dependencyHistories.forall( p =>
-        (p.nextRunTime.isEmpty || nextRunTime.isEmpty || p.nextRunTime.get > nextRunTime.get) &&
-          p.status == HealthStatus.SUCCESS.toString
-      )
+      // dependencies need to all in SUCCESS state AND next_run_time > next_run_time of to be scheduled pipeline
+      dependencyProgresses.nonEmpty &&
+      dependencyProgresses.forall(_.progress == ProgressStatus.SUCCESS.toString) &&
+      dependencyNextRuntimes.nonEmpty &&
+      dependencyNextRuntimes.forall(nrt => nrt.isEmpty || nextRunTime.isEmpty || nrt.get > nextRunTime.get)
     }
   }
 
@@ -213,6 +213,9 @@ object StartScheduledPipelines extends StarportActivity {
           // activate successful, reset the failure counter, by deleting it
           db.run(ScheduleFailureCounters().filter(_.pipelineId === pipelineRecord.id.get).delete).waitForResult
 
+          new PipelineProgressHelper().insertOrUpdatePipelineProgress(pipelineRecord.id.get, ProgressStatus.RUNNING)
+          logger.info(s"Pipeline ${pipelineRecord.id} mark status as RUNNING")
+
           logger.info(s"Pipeline ${pipelineRecord.id} Successfully scheduled pipeline $pipelineName")
         case None =>
           val errorMessage = s"pipeline with name $pipelineName not found"
@@ -277,7 +280,8 @@ object StartScheduledPipelines extends StarportActivity {
       ))
       .waitForResult
 
-    new PipelineHistoryHelper().addPipelineHistories(dependencyIncompletePipelines, HealthStatus.WAITING)
+    new PipelineProgressHelper()
+      .insertOrUpdatePipelineProgress(dependencyIncompletePipelines.flatMap(_.id).toSet, ProgressStatus.WAITING)
   }
 
   /**

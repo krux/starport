@@ -8,9 +8,7 @@ import com.krux.hyperion.client.{AwsClient, AwsClientForId}
 import com.krux.starport.db.record.FailedPipeline
 import com.krux.starport.db.table.{FailedPipelines, Pipelines, ScheduledPipelines}
 import com.krux.starport.metric.{ConstantValueGauge, MetricSettings}
-import com.krux.starport.util.{AwsDataPipeline, PipelineState, ErrorHandler}
-import com.krux.starport.metric.ConstantValueGauge
-import com.krux.starport.util.{AwsDataPipeline, ErrorHandler, HealthStatus, PipelineHistoryHelper, PipelineState}
+import com.krux.starport.util.{AwsDataPipeline, ErrorHandler, ProgressStatus, PipelineProgressHelper, PipelineState}
 
 
 /**
@@ -53,7 +51,7 @@ object CleanupExistingPipelines extends StarportActivity {
 
     // 1) delete the in console pipelines that no longer need to be there (keep the most x recent
     //    success/error piplines, where x is the retention value in db)
-    // 2) mark pipeline success / failure status in pipeline histories
+    // 2) mark pipeline success / failure status in pipeline_progresses
     inConsolePipelines.groupBy(_.pipelineId).par.foreach { case (pipelineId, scheduledPipelines) =>
 
       val pipelineRecord = db.run(Pipelines().filter(_.id === pipelineId).take(1).result)
@@ -82,9 +80,9 @@ object CleanupExistingPipelines extends StarportActivity {
 
         import scala.concurrent.ExecutionContext.Implicits.global
 
-        val pipelineHistoryHelper = new PipelineHistoryHelper()
-        pipelineHistoryHelper.updatePipelineHistories(healthyPipelines, HealthStatus.SUCCESS)
-        pipelineHistoryHelper.updatePipelineHistories(failedPipelines, HealthStatus.FAILED)
+        val pipelineProgressHelper = new PipelineProgressHelper()
+        pipelineProgressHelper.insertOrUpdatePipelineProgress(healthyPipelines.map(_.pipelineId).toSet, ProgressStatus.SUCCESS)
+        pipelineProgressHelper.insertOrUpdatePipelineProgress(failedPipelines.map(_.pipelineId).toSet, ProgressStatus.FAILED)
 
         def deletePipelineAndUpdateDB(awsId: String): Unit = {
           // delete the pipeline from console then update the field in the database

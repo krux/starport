@@ -11,7 +11,7 @@ trait Schema {
     SchedulerMetrics().schema ++
     ScheduleFailureCounters().schema ++
     PipelineDependencies().schema ++
-    PipelineHistories().schema
+    PipelineProgresses().schema
 
 }
 
