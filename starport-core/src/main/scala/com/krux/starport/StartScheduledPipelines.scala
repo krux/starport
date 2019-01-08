@@ -65,7 +65,7 @@ object StartScheduledPipelines extends StarportActivity {
     * Check pipeline dependencies status
     * @return true if no dependency found or all dependencies are finished
     */
-  def dependencyFinished(pipeline: Pipeline, nextRunTime: Option[DateTime]): Boolean = {
+  def dependencyFinished(pipeline: Pipeline): Boolean = {
     logger.info(s"Pipeline ${pipeline.id} checking pipeline dependencies ...")
 
     // get all dependencies
@@ -78,8 +78,7 @@ object StartScheduledPipelines extends StarportActivity {
     logger.info(s"Pipeline ${pipeline.id} retrieved ${dependencies.size} dependencies")
 
     dependencies.isEmpty || {
-      val dependencyProgressQuery = PipelineProgresses()
-        .filter(p => p.pipelineId.inSet(dependencies))
+      val dependencyProgressQuery = PipelineProgresses().filter(p => p.pipelineId.inSet(dependencies)).map(_.progress)
       val dependencyProgresses = db.run(dependencyProgressQuery.result).waitForResult
 
       val dependencyNextRuntimeQuery = Pipelines().filter(_.id.inSet(dependencies)).map(_.nextRunTime)
@@ -87,9 +86,9 @@ object StartScheduledPipelines extends StarportActivity {
 
       // dependencies need to all in SUCCESS state AND next_run_time > next_run_time of to be scheduled pipeline
       dependencyProgresses.nonEmpty &&
-      dependencyProgresses.forall(_.progress == ProgressStatus.SUCCESS.toString) &&
+      dependencyProgresses.forall(_ == ProgressStatus.SUCCESS.toString) &&
       dependencyNextRuntimes.nonEmpty &&
-      dependencyNextRuntimes.forall(nrt => nrt.isEmpty || nextRunTime.isEmpty || nrt.get > nextRunTime.get)
+      dependencyNextRuntimes.forall(nrt => nrt.isEmpty || pipeline.nextRunTime.isEmpty || nrt.get > pipeline.nextRunTime.get)
     }
   }
 
@@ -201,6 +200,9 @@ object StartScheduledPipelines extends StarportActivity {
           val insertAction = DBIO.seq(ScheduledPipelines() ++= scheduledPipelineRecords)
           db.run(insertAction).waitForResult
 
+          new PipelineProgressHelper().insertOrUpdatePipelineProgress(pipelineRecord.id.get, ProgressStatus.RUNNING)
+          logger.info(s"Pipeline ${pipelineRecord.id} status marked as RUNNING")
+
           logger.info(s"Pipeline ${pipelineRecord.id} updating the next run time")
 
           // update the next runtime in the database
@@ -212,9 +214,6 @@ object StartScheduledPipelines extends StarportActivity {
 
           // activate successful, reset the failure counter, by deleting it
           db.run(ScheduleFailureCounters().filter(_.pipelineId === pipelineRecord.id.get).delete).waitForResult
-
-          new PipelineProgressHelper().insertOrUpdatePipelineProgress(pipelineRecord.id.get, ProgressStatus.RUNNING)
-          logger.info(s"Pipeline ${pipelineRecord.id} mark status as RUNNING")
 
           logger.info(s"Pipeline ${pipelineRecord.id} Successfully scheduled pipeline $pipelineName")
         case None =>
@@ -232,7 +231,7 @@ object StartScheduledPipelines extends StarportActivity {
     db.run(DBIO.seq(SchedulerMetrics() += SchedulerMetric(actualStart))).waitForResult
 
     val (pipelineModels, dependencyIncompletePipelines) = pendingPipelineRecords(options.scheduledEnd)
-      .partition(p => dependencyFinished(p, p.nextRunTime))
+      .partition(dependencyFinished)
 
     db.run(DBIO.seq(
         SchedulerMetrics()
