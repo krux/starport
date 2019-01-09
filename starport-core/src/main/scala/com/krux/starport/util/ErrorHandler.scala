@@ -35,7 +35,6 @@ object ErrorHandler extends Logging with WaitForIt {
 
     val pipelineId = pipeline.id.get
     val fromEmail = conf.fromEmail
-    //TODO add pipeline.owner.getOrElse(PagerDutyEmail)
     val toEmails = conf.toEmails
 
     def handlePipelineAndNotify(failureCount: Int): Future[String] = {
