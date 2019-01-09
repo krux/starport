@@ -81,8 +81,8 @@ object ErrorHandler extends Logging with WaitForIt {
   /**
    * @return the SES send ID
    */
-  def cleanupActivityFailed(pipeline: Pipeline, stackTrace: Array[StackTraceElement]): String = {
-    val conf = StarportSettings()
+  def cleanupActivityFailed(pipeline: Pipeline, stackTrace: Array[StackTraceElement])
+    (implicit conf: StarportSettings): String = {
     SendEmail(
       conf.toEmails,
       conf.fromEmail,
