@@ -18,7 +18,7 @@ object ManagePipelineDependency extends WaitForIt with Logging {
     add: Boolean = false,
     remove: Boolean = false,
     pipelineId: Int = 0,
-    dependentPipelineId: Int = 0
+    upstreamPipelineId: Int = 0
   )
 
   def main(args: Array[String]): Unit = {
@@ -40,8 +40,8 @@ object ManagePipelineDependency extends WaitForIt with Logging {
         .text("pipeline id")
         .required()
 
-      opt[Int]("dependent-pid").action((x, c) => c.copy(dependentPipelineId = x))
-        .text("dependent pipeline id")
+      opt[Int]("upstream-pid").action((x, c) => c.copy(upstreamPipelineId = x))
+        .text("upstream pipeline id")
         .required()
     }
 
@@ -50,16 +50,16 @@ object ManagePipelineDependency extends WaitForIt with Logging {
       val db = starportSettings.jdbc.db
 
       if (cli.add) {
-        val pipelineDependencyRecord = PipelineDependency(cli.pipelineId, cli.dependentPipelineId)
-        db.run(DBIO.seq(PipelineDependencies()+=pipelineDependencyRecord)).waitForResult
-        logger.info(s"Added pipeline dependency ${cli.pipelineId} -> ${cli.dependentPipelineId}")
+        val pipelineDependencyRecord = PipelineDependency(cli.pipelineId, cli.upstreamPipelineId)
+        db.run(DBIO.seq(PipelineDependencies() += pipelineDependencyRecord)).waitForResult
+        logger.info(s"Added pipeline dependency ${cli.upstreamPipelineId} => ${cli.pipelineId}")
       } else if (cli.remove) {
         db.run(
           PipelineDependencies()
-            .filter(pd => pd.pipelineId === cli.pipelineId && pd.dependentPipelineId === cli.dependentPipelineId)
+            .filter(pd => pd.pipelineId === cli.pipelineId && pd.upstreamPipelineId === cli.upstreamPipelineId)
             .delete
         ).waitForResult
-        logger.info(s"Removed pipeline dependency ${cli.pipelineId} -> ${cli.dependentPipelineId}")
+        logger.info(s"Removed pipeline dependency ${cli.upstreamPipelineId} => ${cli.pipelineId}")
       } else {
         logger.info("No action needed.")
       }

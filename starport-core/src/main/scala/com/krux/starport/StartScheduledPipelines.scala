@@ -71,24 +71,24 @@ object StartScheduledPipelines extends StarportActivity {
     // get all dependencies
     val query = PipelineDependencies()
       .filter(_.pipelineId === pipeline.id)
-      .map(_.dependentPipelineId)
+      .map(_.upstreamPipelineId)
 
-    val dependencies = db.run(query.result).waitForResult.toSet
+    val upstreamPipelines = db.run(query.result).waitForResult.toSet
 
-    logger.info(s"Pipeline ${pipeline.id} retrieved ${dependencies.size} dependencies")
+    logger.info(s"Pipeline ${pipeline.id} retrieved ${upstreamPipelines.size} upstream pipelines")
 
-    dependencies.isEmpty || {
-      val dependencyProgressQuery = PipelineProgresses().filter(p => p.pipelineId.inSet(dependencies)).map(_.progress)
-      val dependencyProgresses = db.run(dependencyProgressQuery.result).waitForResult
+    upstreamPipelines.isEmpty || {
+      val upstreamProgressQuery = PipelineProgresses().filter(p => p.pipelineId.inSet(upstreamPipelines)).map(_.progress)
+      val upstreamProgresses = db.run(upstreamProgressQuery.result).waitForResult
 
-      val dependencyNextRuntimeQuery = Pipelines().filter(_.id.inSet(dependencies)).map(_.nextRunTime)
-      val dependencyNextRuntimes = db.run(dependencyNextRuntimeQuery.result).waitForResult
+      val upstreamNextRuntimeQuery = Pipelines().filter(_.id.inSet(upstreamPipelines)).map(_.nextRunTime)
+      val upstreamNextRuntimes = db.run(upstreamNextRuntimeQuery.result).waitForResult
 
       // dependencies need to all in SUCCESS state AND next_run_time > next_run_time of to be scheduled pipeline
-      dependencyProgresses.nonEmpty &&
-      dependencyProgresses.forall(_ == ProgressStatus.SUCCESS.toString) &&
-      dependencyNextRuntimes.nonEmpty &&
-      dependencyNextRuntimes.forall(nrt => nrt.isEmpty || pipeline.nextRunTime.isEmpty || nrt.get > pipeline.nextRunTime.get)
+      upstreamProgresses.nonEmpty &&
+      upstreamProgresses.forall(_ == ProgressStatus.SUCCESS.toString) &&
+      upstreamNextRuntimes.nonEmpty &&
+      upstreamNextRuntimes.forall(nrt => nrt.isEmpty || pipeline.nextRunTime.isEmpty || nrt.get > pipeline.nextRunTime.get)
     }
   }
 
