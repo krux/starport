@@ -87,8 +87,7 @@ object StartScheduledPipelines extends StarportActivity {
       // dependencies need to all in SUCCESS state AND next_run_time > next_run_time of to be scheduled pipeline
       upstreamProgresses.nonEmpty &&
       upstreamProgresses.forall(_ == ProgressStatus.SUCCESS.toString) &&
-      upstreamNextRuntimes.nonEmpty &&
-      upstreamNextRuntimes.forall(nrt => nrt.isEmpty || pipeline.nextRunTime.isEmpty || nrt.get > pipeline.nextRunTime.get)
+      pipeline.nextRunTime.forall(pipelineNrt => upstreamNextRuntimes.forall(_.forall(_ > pipelineNrt)))
     }
   }
 
