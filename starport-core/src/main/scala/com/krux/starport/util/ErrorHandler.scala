@@ -35,7 +35,7 @@ object ErrorHandler extends Logging with WaitForIt {
 
     val pipelineId = pipeline.id.get
     val fromEmail = conf.fromEmail
-    val toEmails = conf.toEmails
+    val toEmails = pipeline.owner.map(Seq(_)).getOrElse(conf.toEmails)
 
     def handlePipelineAndNotify(failureCount: Int): Future[String] = {
       if (failureCount >= MaxSchedulingFailure) {  // deactivate the pipeline if it reaches max # of failures
@@ -46,7 +46,7 @@ object ErrorHandler extends Logging with WaitForIt {
           SendEmail(
             toEmails,
             fromEmail,
-            s"[ACTION NEEDED] Pipline ${pipeline.name} has been deactivated due to scheduling failure",
+            s"[ACTION NEEDED] Pipeline ${pipeline.name} has been deactivated due to scheduling failure",
             errorMessage
           )
         }
@@ -60,7 +60,7 @@ object ErrorHandler extends Logging with WaitForIt {
           SendEmail(
             toEmails,
             fromEmail,
-            s"[ACTION NEEDED] Pipline ${pipeline.name} failed to schedule ($newCount/$MaxSchedulingFailure)",
+            s"[ACTION NEEDED] Pipeline ${pipeline.name} failed to schedule ($newCount/$MaxSchedulingFailure)",
             s"It will be deactivated after the number of schedule failures reach $MaxSchedulingFailure\n\n$errorMessage"
           )
         }
@@ -83,7 +83,7 @@ object ErrorHandler extends Logging with WaitForIt {
   def cleanupActivityFailed(pipeline: Pipeline, stackTrace: Array[StackTraceElement])
     (implicit conf: StarportSettings): String = {
     SendEmail(
-      conf.toEmails,
+      pipeline.owner.map(Seq(_)).getOrElse(conf.toEmails),
       conf.fromEmail,
       s"[Starport Cleanup Failure] cleanup activity failed for ${pipeline.name}",
       stackTrace.mkString("\n")
