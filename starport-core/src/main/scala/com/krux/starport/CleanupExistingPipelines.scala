@@ -8,7 +8,7 @@ import com.krux.hyperion.client.{AwsClient, AwsClientForId}
 import com.krux.starport.db.record.FailedPipeline
 import com.krux.starport.db.table.{FailedPipelines, Pipelines, ScheduledPipelines}
 import com.krux.starport.metric.{ConstantValueGauge, MetricSettings}
-import com.krux.starport.util.{AwsDataPipeline, PipelineState, ErrorHandler}
+import com.krux.starport.util.{AwsDataPipeline, ErrorHandler, ProgressStatus, PipelineProgressHelper, PipelineState}
 
 
 /**
@@ -22,7 +22,7 @@ object CleanupExistingPipelines extends StarportActivity {
   val metrics = new MetricRegistry()
 
   def activePipelineRecords(): Int = {
-    logger.info("Retriving active pipelines...")
+    logger.info("Retrieving active pipelines...")
 
     val query = Pipelines()
       .filter(_.isActive).size
@@ -49,8 +49,9 @@ object CleanupExistingPipelines extends StarportActivity {
 
     val deleteCounter = metrics.counter("counters.pipeline_deleted")
 
-    // delete the in console pipelines that no longer need to be there (keep the most x recent
-    // success/error piplines, where x is the retention value in db)
+    // 1) delete the in console pipelines that no longer need to be there (keep the most x recent
+    //    success/error piplines, where x is the retention value in db)
+    // 2) mark pipeline success / failure status in pipeline_progresses
     inConsolePipelines.groupBy(_.pipelineId).par.foreach { case (pipelineId, scheduledPipelines) =>
 
       val pipelineRecord = db.run(Pipelines().filter(_.id === pipelineId).take(1).result)
@@ -60,9 +61,7 @@ object CleanupExistingPipelines extends StarportActivity {
       // TODO refactor the try
       try {
 
-        // TODO probably better to just use a different logger
-        val logPrefix = s"|PipelineId: ${pipelineId}|"
-        logger.info(s"$logPrefix has ${scheduledPipelines.size} in console pipelines.")
+        logger.info(s"${pipelineRecord.id} has ${scheduledPipelines.size} in console pipelines.")
 
         val pipelineStatuses = AwsDataPipeline.describePipeline(scheduledPipelines.map(_.awsId): _*)
 
@@ -70,14 +69,20 @@ object CleanupExistingPipelines extends StarportActivity {
           pipelineStatuses.get(p.awsId).flatMap(_.pipelineState) == Some(PipelineState.FINISHED)
         }
 
-        logger.info(s"$logPrefix has ${finishedPipelines.size} finished pipelines.")
+        logger.info(s"Pipeline ${pipelineRecord.id} has ${finishedPipelines.size} finished pipelines.")
 
         val (failedPipelines, healthyPipelines) = finishedPipelines.partition { p =>
           pipelineStatuses.get(p.awsId).flatMap(_.healthStatus) == Some("ERROR")
         }
 
-        logger.info(s"$logPrefix has ${failedPipelines.size} failed pipelines.")
-        logger.info(s"$logPrefix has ${healthyPipelines.size} healthy pipelines.")
+        logger.info(s"Pipeline ${pipelineRecord.id} has ${failedPipelines.size} failed pipelines.")
+        logger.info(s"Pipeline ${pipelineRecord.id} has ${healthyPipelines.size} healthy pipelines.")
+
+        import scala.concurrent.ExecutionContext.Implicits.global
+
+        val pipelineProgressHelper = new PipelineProgressHelper()
+        pipelineProgressHelper.insertOrUpdatePipelineProgress(healthyPipelines.map(_.pipelineId).toSet, ProgressStatus.Success)
+        pipelineProgressHelper.insertOrUpdatePipelineProgress(failedPipelines.map(_.pipelineId).toSet, ProgressStatus.Failed)
 
         def deletePipelineAndUpdateDB(awsId: String): Unit = {
           // delete the pipeline from console then update the field in the database
@@ -99,7 +104,7 @@ object CleanupExistingPipelines extends StarportActivity {
           .drop(pipelineRecord.retention)
           .flatMap(_._2)
           .foreach { sp =>
-            logger.info(s"$logPrefix ask to delete ${sp.awsId}.")
+            logger.info(s"Pipeline ${pipelineRecord.id} ask to delete ${sp.awsId}.")
             deletePipelineAndUpdateDB(sp.awsId)
             deleteCounter.inc()
           }
@@ -128,6 +133,7 @@ object CleanupExistingPipelines extends StarportActivity {
             logger.info(s"insert ${failedPipeline.awsId} to failed pipelines")
             db.run(DBIO.seq(FailedPipelines() += failedPipeline)).waitForResult
           }
+
       } catch {
         case e: Exception =>
           e.printStackTrace()

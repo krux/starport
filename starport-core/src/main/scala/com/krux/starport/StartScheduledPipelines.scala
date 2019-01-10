@@ -10,13 +10,13 @@ import com.codahale.metrics.MetricRegistry
 import com.github.nscala_time.time.Imports._
 import slick.jdbc.PostgresProfile.api._
 
-import com.krux.hyperion.client.{AwsClientForName, AwsClient}
+import com.krux.hyperion.client.{AwsClient, AwsClientForName}
 import com.krux.hyperion.expression.{Duration => HDuration}
-import com.krux.starport.cli.{SchedulerOptions, SchedulerOptionParser}
+import com.krux.starport.cli.{SchedulerOptionParser, SchedulerOptions}
 import com.krux.starport.db.record.{Pipeline, ScheduledPipeline, SchedulerMetric}
-import com.krux.starport.db.table.{ScheduledPipelines, Pipelines, SchedulerMetrics, ScheduleFailureCounters}
-import com.krux.starport.metric.{ConstantValueGauge, SimpleTimerGauge, MetricSettings}
-import com.krux.starport.util.{S3FileHandler, ErrorHandler}
+import com.krux.starport.db.table.{PipelineDependencies, PipelineProgresses, Pipelines, ScheduleFailureCounters, ScheduledPipelines, SchedulerMetrics}
+import com.krux.starport.metric.{ConstantValueGauge, MetricSettings, SimpleTimerGauge}
+import com.krux.starport.util.{ErrorHandler, PipelineProgressHelper, ProgressStatus, S3FileHandler}
 
 
 object StartScheduledPipelines extends StarportActivity {
@@ -42,7 +42,7 @@ object StartScheduledPipelines extends StarportActivity {
     .toMap
 
   def pendingPipelineRecords(scheduledEnd: DateTime): Seq[Pipeline] = {
-    logger.info("Retriving pending pipelines..")
+    logger.info("Retrieving pending pipelines..")
 
     // get all jobs to be scheduled
     val query = Pipelines()
@@ -62,6 +62,36 @@ object StartScheduledPipelines extends StarportActivity {
   }
 
   /**
+    * Check pipeline dependencies status
+    * @return true if no dependency found or all dependencies are finished
+    */
+  def dependencyFinished(pipeline: Pipeline): Boolean = {
+    logger.info(s"Pipeline ${pipeline.id} checking pipeline dependencies ...")
+
+    // get all dependencies
+    val query = PipelineDependencies()
+      .filter(_.pipelineId === pipeline.id)
+      .map(_.upstreamPipelineId)
+
+    val upstreamPipelines = db.run(query.result).waitForResult.toSet
+
+    logger.info(s"Pipeline ${pipeline.id} retrieved ${upstreamPipelines.size} upstream pipelines")
+
+    upstreamPipelines.isEmpty || {
+      val upstreamProgressQuery = PipelineProgresses().filter(p => p.pipelineId.inSet(upstreamPipelines)).map(_.progress)
+      val upstreamProgresses = db.run(upstreamProgressQuery.result).waitForResult
+
+      val upstreamNextRuntimeQuery = Pipelines().filter(_.id.inSet(upstreamPipelines)).map(_.nextRunTime)
+      val upstreamNextRuntimes = db.run(upstreamNextRuntimeQuery.result).waitForResult
+
+      // dependencies need to all in SUCCESS state AND next_run_time > next_run_time of to be scheduled pipeline
+      upstreamProgresses.nonEmpty &&
+      upstreamProgresses.forall(_ == ProgressStatus.Success.toString) &&
+      pipeline.nextRunTime.forall(pipelineNrt => upstreamNextRuntimes.forall(_.forall(_ > pipelineNrt)))
+    }
+  }
+
+  /**
    * @return status, the output, and the deployed pipeline name
    */
   def deployPipeline(
@@ -71,10 +101,7 @@ object StartScheduledPipelines extends StarportActivity {
       localJar: String
     ): (Int, String, String) = {
 
-    // TODO probably better to just use a different logger
-    val logPrefix = s"|PipelineId: ${pipelineRecord.id}|"
-
-    logger.info(s"$logPrefix Deploying pipeline: ${pipelineRecord.name}")
+    logger.info(s"Pipeline ${pipelineRecord.id} Deploying pipeline: ${pipelineRecord.name}")
 
     val start = pipelineRecord.nextRunTime.get
     val until = pipelineRecord.end
@@ -90,7 +117,7 @@ object StartScheduledPipelines extends StarportActivity {
       if (pipelineRecord.backfill) timesTillEnd(start, until, HDuration(pipelinePeriod))
       else 1
 
-    logger.info(s"$logPrefix calculatedTimes: $calculatedTimes")
+    logger.info(s"Pipeline ${pipelineRecord.id} calculatedTimes: $calculatedTimes")
     if (calculatedTimes < 1) {
       // the calculatedTimes should never be < 1
       logger.error(s"calculatedTimes < 1")
@@ -122,7 +149,7 @@ object StartScheduledPipelines extends StarportActivity {
       extraEnvs: _*
     )
 
-    logger.info(s"$logPrefix Executing `${command.mkString(" ")}`")
+    logger.info(s"Pipeline ${pipelineRecord.id} Executing `${command.mkString(" ")}`")
 
     val outputBuilder = new StringBuilder
     val status = process ! ProcessLogger(line => outputBuilder.append(line + "\n"))
@@ -139,10 +166,7 @@ object StartScheduledPipelines extends StarportActivity {
       scheduledEnd: DateTime
     ) = {
 
-    // TODO probably better to just use a different logger
-    val logPrefix = s"|PipelineId: ${pipelineRecord.id}|"
-
-    logger.info(s"$logPrefix Activating pipeline: $pipelineName...")
+    logger.info(s"Pipeline ${pipelineRecord.id} Activating pipeline: $pipelineName...")
 
     val awsClientForName = AwsClientForName(AwsClient.getClient(), pipelineName, conf.maxRetry)
     val pipelineIdNameMap = awsClientForName.pipelineIdNames
@@ -153,11 +177,11 @@ object StartScheduledPipelines extends StarportActivity {
           val activationStatus = if (client.activatePipelines().nonEmpty) {
             "success"
           } else {
-            logger.error(s"$logPrefix Failed to activate pipeline ${client.pipelineIds}")
+            logger.error(s"Pipeline ${pipelineRecord.id} Failed to activate pipeline ${client.pipelineIds}")
             "fail"
           }
 
-          logger.info(s"$logPrefix Register pipelines (${client.pipelineIds}) in database.")
+          logger.info(s"Pipeline ${pipelineRecord.id} Register pipelines (${client.pipelineIds}) in database.")
 
           val scheduledPipelineRecords = client.pipelineIds.map(awsId =>
             ScheduledPipeline(
@@ -175,19 +199,22 @@ object StartScheduledPipelines extends StarportActivity {
           val insertAction = DBIO.seq(ScheduledPipelines() ++= scheduledPipelineRecords)
           db.run(insertAction).waitForResult
 
-          logger.info(s"$logPrefix updating the next run time")
+          new PipelineProgressHelper().insertOrUpdatePipelineProgress(pipelineRecord.id.get, ProgressStatus.Running)
+          logger.info(s"Pipeline ${pipelineRecord.id} status marked as RUNNING")
+
+          logger.info(s"Pipeline ${pipelineRecord.id} updating the next run time")
 
           // update the next runtime in the database
           val newNextRunTime = nextRunTime(pipelineRecord.nextRunTime.get, HDuration(pipelineRecord.period), scheduledEnd)
           val updateQuery = Pipelines().filter(_.id === pipelineRecord.id).map(_.nextRunTime)
-          logger.debug(s"$logPrefix Update with query ${updateQuery.updateStatement}")
+          logger.debug(s"Pipeline ${pipelineRecord.id} Update with query ${updateQuery.updateStatement}")
           val updateAction = updateQuery.update(Some(newNextRunTime))
           db.run(updateAction).waitForResult
 
           // activate successful, reset the failure counter, by deleting it
           db.run(ScheduleFailureCounters().filter(_.pipelineId === pipelineRecord.id.get).delete).waitForResult
 
-          logger.info(s"$logPrefix Successfully scheduled pipeline $pipelineName")
+          logger.info(s"Pipeline ${pipelineRecord.id} Successfully scheduled pipeline $pipelineName")
         case None =>
           val errorMessage = s"pipeline with name $pipelineName not found"
           logger.error(errorMessage)
@@ -202,7 +229,9 @@ object StartScheduledPipelines extends StarportActivity {
     val actualStart = options.actualStart
     db.run(DBIO.seq(SchedulerMetrics() += SchedulerMetric(actualStart))).waitForResult
 
-    val pipelineModels = pendingPipelineRecords(options.scheduledEnd)
+    val (pipelineModels, dependencyIncompletePipelines) = pendingPipelineRecords(options.scheduledEnd)
+      .partition(dependencyFinished)
+
     db.run(DBIO.seq(
         SchedulerMetrics()
           .filter(_.startTime === actualStart)
@@ -226,7 +255,7 @@ object StartScheduledPipelines extends StarportActivity {
 
       val timerInst = scheduleTimer.time()
 
-      logger.info(s"deploying pipleine ${p.name}")
+      logger.info(s"deploying pipeline ${p.name}")
 
       val (status, output, pipelineName) = deployPipeline(
         p, options.scheduledStart, options.scheduledEnd, localJars(p.jar))
@@ -249,6 +278,8 @@ object StartScheduledPipelines extends StarportActivity {
       ))
       .waitForResult
 
+    new PipelineProgressHelper()
+      .insertOrUpdatePipelineProgress(dependencyIncompletePipelines.flatMap(_.id).toSet, ProgressStatus.Waiting)
   }
 
   /**

@@ -261,7 +261,7 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
 
         require(pipelineRecord.owner.nonEmpty, "Owner required for new pipelines")
 
-        runQuery(DBIO.seq(Pipelines() += pipelineRecord), {})
+        runQuery(DBIO.seq(Pipelines() += pipelineRecord).transactionally, {})
 
         sendSlackNotification(
           pipelineRecord.name + " Scheduled. Next Run - " + pipelineRecord.nextRunTime
