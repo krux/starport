@@ -81,8 +81,8 @@ object CleanupExistingPipelines extends StarportActivity {
         import scala.concurrent.ExecutionContext.Implicits.global
 
         val pipelineProgressHelper = new PipelineProgressHelper()
-        pipelineProgressHelper.insertOrUpdatePipelineProgress(healthyPipelines.map(_.pipelineId).toSet, ProgressStatus.SUCCESS)
-        pipelineProgressHelper.insertOrUpdatePipelineProgress(failedPipelines.map(_.pipelineId).toSet, ProgressStatus.FAILED)
+        pipelineProgressHelper.insertOrUpdatePipelineProgress(healthyPipelines.map(_.pipelineId).toSet, ProgressStatus.Success)
+        pipelineProgressHelper.insertOrUpdatePipelineProgress(failedPipelines.map(_.pipelineId).toSet, ProgressStatus.Failed)
 
         def deletePipelineAndUpdateDB(awsId: String): Unit = {
           // delete the pipeline from console then update the field in the database

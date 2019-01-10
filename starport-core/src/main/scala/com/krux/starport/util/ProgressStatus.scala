@@ -4,8 +4,8 @@ object ProgressStatus extends Enumeration {
 
   type Progress = Value
 
-  val SUCCESS = Value("success")
-  val FAILED = Value("failed")
-  val WAITING = Value("waiting")
-  val RUNNING = Value("running")
+  final val Success = Value("success")
+  final val Failed = Value("failed")
+  final val Waiting = Value("waiting")
+  final val Running = Value("running")
 }

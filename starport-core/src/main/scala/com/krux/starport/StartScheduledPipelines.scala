@@ -86,7 +86,7 @@ object StartScheduledPipelines extends StarportActivity {
 
       // dependencies need to all in SUCCESS state AND next_run_time > next_run_time of to be scheduled pipeline
       upstreamProgresses.nonEmpty &&
-      upstreamProgresses.forall(_ == ProgressStatus.SUCCESS.toString) &&
+      upstreamProgresses.forall(_ == ProgressStatus.Success.toString) &&
       pipeline.nextRunTime.forall(pipelineNrt => upstreamNextRuntimes.forall(_.forall(_ > pipelineNrt)))
     }
   }
@@ -199,7 +199,7 @@ object StartScheduledPipelines extends StarportActivity {
           val insertAction = DBIO.seq(ScheduledPipelines() ++= scheduledPipelineRecords)
           db.run(insertAction).waitForResult
 
-          new PipelineProgressHelper().insertOrUpdatePipelineProgress(pipelineRecord.id.get, ProgressStatus.RUNNING)
+          new PipelineProgressHelper().insertOrUpdatePipelineProgress(pipelineRecord.id.get, ProgressStatus.Running)
           logger.info(s"Pipeline ${pipelineRecord.id} status marked as RUNNING")
 
           logger.info(s"Pipeline ${pipelineRecord.id} updating the next run time")
@@ -279,7 +279,7 @@ object StartScheduledPipelines extends StarportActivity {
       .waitForResult
 
     new PipelineProgressHelper()
-      .insertOrUpdatePipelineProgress(dependencyIncompletePipelines.flatMap(_.id).toSet, ProgressStatus.WAITING)
+      .insertOrUpdatePipelineProgress(dependencyIncompletePipelines.flatMap(_.id).toSet, ProgressStatus.Waiting)
   }
 
   /**

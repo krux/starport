@@ -24,7 +24,7 @@ object MarkPipelineAsFinished extends WaitForIt with Logging {
   }
 
   def markAsSuccess(pipelineId: Int): Unit = {
-    new PipelineProgressHelper().insertOrUpdatePipelineProgress(pipelineId, ProgressStatus.SUCCESS)
+    new PipelineProgressHelper().insertOrUpdatePipelineProgress(pipelineId, ProgressStatus.Success)
     logger.info(s"Marked pipeline $pipelineId as SUCCESS")
   }
 
