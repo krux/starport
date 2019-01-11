@@ -83,7 +83,7 @@ object ErrorHandler extends Logging with WaitForIt {
   def cleanupActivityFailed(pipeline: Pipeline, stackTrace: Array[StackTraceElement])
     (implicit conf: StarportSettings): String = {
     SendEmail(
-      pipeline.owner.map(Seq(_)).getOrElse(conf.toEmails),
+      conf.toEmails,
       conf.fromEmail,
       s"[Starport Cleanup Failure] cleanup activity failed for ${pipeline.name}",
       stackTrace.mkString("\n")
