@@ -38,6 +38,9 @@ class StarportSettings(val config: Config) extends Serializable {
 
   val slackWebhookURL: Option[String] = Try(config.getString("krux.starport.slack_webhook_url")).toOption
 
+  val toEmails: Seq[String] = config.getStringList("krux.starport.notification.email.to").asScala
+
+  val fromEmail: String = config.getString("krux.starport.notification.email.from")
 }
 
 object StarportSettings {

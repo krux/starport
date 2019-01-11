@@ -21,7 +21,6 @@ object ErrorHandler extends Logging with WaitForIt {
 
   // TODO Make this configurable
   final val MaxSchedulingFailure = 3
-  final val PagerDutyEmail = "starport-service@krux.pagerduty.com"
 
   /**
    * Tracks how many scheduling failure occurs consecutively and deactivates the pipeline if it
@@ -35,10 +34,8 @@ object ErrorHandler extends Logging with WaitForIt {
     val db = conf.jdbc.db
 
     val pipelineId = pipeline.id.get
-    val owners = Seq(
-      pipeline.owner.getOrElse(PagerDutyEmail),
-      "kexin.xie@salesforce.com"
-    )
+    val fromEmail = conf.fromEmail
+    val toEmails = pipeline.owner.map(Seq(_)).getOrElse(conf.toEmails)
 
     def handlePipelineAndNotify(failureCount: Int): Future[String] = {
       if (failureCount >= MaxSchedulingFailure) {  // deactivate the pipeline if it reaches max # of failures
@@ -47,8 +44,9 @@ object ErrorHandler extends Logging with WaitForIt {
 
         db.run(deactivatePipelineQuery).map { _ =>
           SendEmail(
-            owners,
-            s"[ACTION NEEDED] Pipline ${pipeline.name} has been deactivated due to scheduling failure",
+            toEmails,
+            fromEmail,
+            s"[ACTION NEEDED] Pipeline ${pipeline.name} has been deactivated due to scheduling failure",
             errorMessage
           )
         }
@@ -60,8 +58,9 @@ object ErrorHandler extends Logging with WaitForIt {
         // Set schedule failure count
         db.run(setScheduleFailureCountQuery).map { _ =>
           SendEmail(
-            owners,
-            s"[ACTION NEEDED] Pipline ${pipeline.name} failed to schedule ($newCount/$MaxSchedulingFailure)",
+            toEmails,
+            fromEmail,
+            s"[ACTION NEEDED] Pipeline ${pipeline.name} failed to schedule ($newCount/$MaxSchedulingFailure)",
             s"It will be deactivated after the number of schedule failures reach $MaxSchedulingFailure\n\n$errorMessage"
           )
         }
@@ -81,9 +80,11 @@ object ErrorHandler extends Logging with WaitForIt {
   /**
    * @return the SES send ID
    */
-  def cleanupActivityFailed(pipeline: Pipeline, stackTrace: Array[StackTraceElement]): String = {
+  def cleanupActivityFailed(pipeline: Pipeline, stackTrace: Array[StackTraceElement])
+    (implicit conf: StarportSettings): String = {
     SendEmail(
-      Seq(PagerDutyEmail, "kexin.xie@salesforce.com"),
+      conf.toEmails,
+      conf.fromEmail,
       s"[Starport Cleanup Failure] cleanup activity failed for ${pipeline.name}",
       stackTrace.mkString("\n")
     )
