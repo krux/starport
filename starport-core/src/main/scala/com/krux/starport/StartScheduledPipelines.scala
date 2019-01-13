@@ -190,7 +190,6 @@ object StartScheduledPipelines extends StarportActivity {
           logger.info(s"$logPrefix Successfully scheduled pipeline $pipelineName")
         case None =>
           val errorMessage = s"pipeline with name $pipelineName not found"
-          logger.error(errorMessage)
           ErrorHandler.pipelineScheduleFailed(pipelineRecord, errorMessage)
       }
   }
