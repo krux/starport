@@ -31,6 +31,8 @@ object ErrorHandler extends Logging with WaitForIt {
   def pipelineScheduleFailed(pipeline: Pipeline, errorMessage: String)
     (implicit conf: StarportSettings, ec: ExecutionContext): String = {
 
+    logger.warn(s"Failed scheduling pipeline ${pipeline.id} because: $errorMessage")
+
     val db = conf.jdbc.db
 
     val pipelineId = pipeline.id.get
@@ -82,11 +84,13 @@ object ErrorHandler extends Logging with WaitForIt {
    */
   def cleanupActivityFailed(pipeline: Pipeline, stackTrace: Array[StackTraceElement])
     (implicit conf: StarportSettings): String = {
+    val stackTraceMessage = stackTrace.mkString("\n")
+    logger.warn(s"cleanup activity failed for pipeline ${pipeline.id}, because: $stackTraceMessage")
     SendEmail(
       conf.toEmails,
       conf.fromEmail,
       s"[Starport Cleanup Failure] cleanup activity failed for ${pipeline.name}",
-      stackTrace.mkString("\n")
+      stackTraceMessage
     )
   }
 
