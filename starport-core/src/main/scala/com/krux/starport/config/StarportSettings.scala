@@ -7,11 +7,14 @@ import scala.collection.{Map => IMap}
 import scala.util.Try
 
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
+import com.amazonaws.regions.Regions
 
 import com.krux.starport.net.StarportURLStreamHandlerFactory
 
 
 class StarportSettings(val config: Config) extends Serializable {
+
+  val region = Try(config.getString("krux.starport.region")).toOption.map(Regions.fromName)
 
   val starportJarUrl = config.getString("krux.starport.jar.url")
 

@@ -114,7 +114,7 @@ object StartScheduledPipelines extends StarportActivity {
       "--times", times.toString,
       "--every", pipelinePeriod,
       "--name", pipelineName
-    )
+    ) ++ conf.region.toSeq.flatMap(r => Seq("--region", r.getName))
 
     val process = Process(
       command,
