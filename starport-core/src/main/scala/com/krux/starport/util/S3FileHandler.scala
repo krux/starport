@@ -13,11 +13,7 @@ object S3FileHandler extends Logging {
   val bufferSize = 1024
 
   def getTempDirectory(baseDir: Option[String]): File = {
-    // TODO change this to "/mnt/tmp/starport"
-    // and delete the file afterwards
-    val tempDir = new File(baseDir.getOrElse(s"${System.getProperty("user.home")}/.starport"))
-    if (!tempDir.exists()) tempDir.mkdir()
-    tempDir
+    new File("/tmp")
   }
 
   def getFileFromS3(s3spec: String, baseDir: Option[String] = None): File = {
