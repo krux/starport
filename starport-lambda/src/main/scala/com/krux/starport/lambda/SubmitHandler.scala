@@ -18,7 +18,7 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] {
     logger.info("lambda invoked...")
     SubmitPipeline.main(input.getArgs)
     logger.info("lambda finished...")
-    SubmitResponse("Starport lambda handler: ", input)
+    SubmitResponse("com.krux.starport.lambda.SubmitHandler processed: ", input)
   }
 }
 

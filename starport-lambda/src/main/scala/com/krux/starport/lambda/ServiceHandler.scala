@@ -18,7 +18,7 @@ class ServiceHandler extends RequestHandler[ServiceRequest, ServiceResponse] {
     logger.info("lambda invoked...")
     Starport.main(input.getArgs)
     logger.info("lambda finished...")
-    ServiceResponse("Starport lambda handler: ", input)
+    ServiceResponse("com.krux.starport.lambda.ServiceHandler processed: ", input)
   }
 }
 
