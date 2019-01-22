@@ -1,4 +1,4 @@
-val awsSdkVersion = "1.11.238"
+val awsSdkVersion = "1.11.486"
 val slickVersion = "3.2.3"
 
 val scalaTestArtifact      = "org.scalatest"          %% "scalatest"            % "3.0.5" % "test"
@@ -7,7 +7,7 @@ val slickHikaricpArtifact  = "com.typesafe.slick"     %% "slick-hikaricp"       
 val scoptArtifact          = "com.github.scopt"       %% "scopt"                % "3.7.0"
 val configArtifact         = "com.typesafe"           %  "config"               % "1.3.3"
 val nscalaTimeArtifact     = "com.github.nscala-time" %% "nscala-time"          % "2.18.0"
-val hyperionArtifact       = "com.krux"               %% "hyperion"             % "5.1.6"
+val hyperionArtifact       = "com.krux"               %% "hyperion"             % "5.3.0"
 val slf4jApiArtifact       = "org.slf4j"              %  "slf4j-api"            % "1.7.12"
 val logbackClassicArtifact = "ch.qos.logback"         %  "logback-classic"      % "1.1.7"
 val awsSdkS3               = "com.amazonaws"          %  "aws-java-sdk-s3"      % awsSdkVersion
@@ -19,7 +19,7 @@ val postgreSqlJdbc         = "org.postgresql"         %  "postgresql"           
 
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation", "-feature", "-Xlint", "-Xfatal-warnings"),
-  scalaVersion := "2.12.6",
+  scalaVersion := "2.12.8",
   libraryDependencies += scalaTestArtifact,
   organization := "com.krux",
   test in assembly := {},  // skip test during assembly

@@ -159,29 +159,44 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
         }
       }
 
+      // Because we are using schedule from CLI it will always be Left of the HDateTime
+      // This is a hacky way of solving the incompatibility of hyperion 5.3.0 that changes
+      // scheduling start time from joda DateTime to HDateTime
+      def getStartTimeFromSchedule(schedule: RecurringSchedule): DateTime = {
+        require(schedule.start.isDefined && schedule.start.get.value.isLeft, "Starport does not work with empty or expression based start time")
+        schedule.start.get.value.left.get.withZone(DateTimeZone.UTC)
+      }
+
+      def getPeriodFromSchedule(schedule: RecurringSchedule): Period = {
+        require(schedule.period.value.isLeft, "Starport does not work with expression based period")
+        schedule.period.value.left.get
+      }
+
+
       // load the class from the jar and print the schedule
       // val jars = Array(new File(cli.jar).toURI.toURL)
       val jarFile = S3FileHandler.getFileFromS3(cli.jar, cli.baseDir)
       if (cli.cleanUp) jarFile.deleteOnExit
 
-      val (period, start) = (cli.frequency, cli.schedule) match {
+      val (period, start): (Period, DateTime) = (cli.frequency, cli.schedule) match {
         case (Some(freq), Some(schedule)) =>
           val specifiedSchedule = Schedule
             .cron
             .startDateTime(schedule)
             .every(freq)
-          (specifiedSchedule.period, specifiedSchedule.start.get.withZone(DateTimeZone.UTC))
+
+          (getPeriodFromSchedule(specifiedSchedule), getStartTimeFromSchedule(specifiedSchedule))
         case x =>
           // if the schedule or frequency are not specified then instantiate the pipeline object and read the schedule variable
           val pipelineSchedule = getPipelineSchedule(jarFile, cli)
           // if 'one' of the parameters(schedule / frequency) is specified, then it will override the pipeline's definition of that param
           x match {
             case (Some(freq), None) =>
-              (freq, pipelineSchedule.start.get.withZone(DateTimeZone.UTC))
+              (freq, getStartTimeFromSchedule(pipelineSchedule))
             case (None, Some(schedule)) =>
-              (pipelineSchedule.period, schedule)
+              (getPeriodFromSchedule(pipelineSchedule), schedule)
             case _ =>
-              (pipelineSchedule.period, pipelineSchedule.start.getOrElse(DateTime.now).withZone(DateTimeZone.UTC))
+              (getPeriodFromSchedule(pipelineSchedule), getStartTimeFromSchedule(pipelineSchedule))
           }
       }
 
