@@ -5,8 +5,6 @@ import java.net.URL;
 import java.net.URLStreamHandler;
 import java.net.URLStreamHandlerFactory;
 
-import sun.net.www.protocol.s3.Handler;
-
 public class StarportURLStreamHandlerFactory implements URLStreamHandlerFactory {
 
     /**
@@ -32,7 +30,10 @@ public class StarportURLStreamHandlerFactory implements URLStreamHandlerFactory 
     @Override
     public URLStreamHandler createURLStreamHandler(String protocol) {
         if ("s3".equals(protocol)) {
-            return new Handler();
+            return new sun.net.www.protocol.s3.Handler();
+        }
+        if("ssm".equals(protocol)) {
+            return new sun.net.www.protocol.ssm.Handler();
         }
 
         return null;
