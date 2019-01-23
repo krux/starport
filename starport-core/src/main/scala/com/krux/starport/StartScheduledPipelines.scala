@@ -141,7 +141,7 @@ object StartScheduledPipelines extends StarportActivity {
       "--times", times.toString,
       "--every", pipelinePeriod,
       "--name", pipelineName
-    )
+    ) ++ conf.region.toSeq.flatMap(r => Seq("--region", r.getName))
 
     val process = Process(
       command,
@@ -217,7 +217,6 @@ object StartScheduledPipelines extends StarportActivity {
           logger.info(s"Pipeline ${pipelineRecord.id} Successfully scheduled pipeline $pipelineName")
         case None =>
           val errorMessage = s"pipeline with name $pipelineName not found"
-          logger.error(errorMessage)
           ErrorHandler.pipelineScheduleFailed(pipelineRecord, errorMessage)
       }
   }

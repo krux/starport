@@ -136,7 +136,6 @@ object CleanupExistingPipelines extends StarportActivity {
 
       } catch {
         case e: Exception =>
-          e.printStackTrace()
           ErrorHandler.cleanupActivityFailed(pipelineRecord, e.getStackTrace)
       }
 
