@@ -32,10 +32,9 @@ public class StarportURLStreamHandlerFactory implements URLStreamHandlerFactory 
         if ("s3".equals(protocol)) {
             return new sun.net.www.protocol.s3.Handler();
         }
-        if("ssm".equals(protocol)) {
+        if("ssm".equals(protocol) || "ssm+secure".equals(protocol)) {
             return new sun.net.www.protocol.ssm.Handler();
         }
-
         return null;
     }
 

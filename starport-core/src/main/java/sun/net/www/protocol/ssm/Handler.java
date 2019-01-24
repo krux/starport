@@ -24,8 +24,10 @@ public class Handler extends URLStreamHandler {
             @Override
             public InputStream getInputStream() throws IOException {
                 String ssmPath = "/" + url.getHost() + url.getPath();
-                System.err.println("using ssm path: " + ssmPath);
-                GetParameterRequest ssmRequest = new GetParameterRequest().withName(ssmPath).withWithDecryption(Boolean.TRUE);
+                GetParameterRequest ssmRequest = new GetParameterRequest().withName(ssmPath);
+                if ("ssm+secure".equals(url.getProtocol())) {
+                   ssmRequest.setWithDecryption(Boolean.TRUE);
+                }
                 GetParameterResult ssmResult = ssmClient.getParameter(ssmRequest);
                 String ssmValue = ssmResult.getParameter().getValue();
                 return new ByteArrayInputStream(ssmValue.getBytes(StandardCharsets.UTF_8));
