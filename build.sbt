@@ -12,6 +12,7 @@ val slf4jApiArtifact       = "org.slf4j"              %  "slf4j-api"            
 val logbackClassicArtifact = "ch.qos.logback"         %  "logback-classic"      % "1.1.7"
 val awsSdkS3               = "com.amazonaws"          %  "aws-java-sdk-s3"      % awsSdkVersion
 val awsSdkSES              = "com.amazonaws"          %  "aws-java-sdk-ses"     % awsSdkVersion
+val awsSdkSSM              = "com.amazonaws"          %  "aws-java-sdk-ssm"     % awsSdkVersion
 val stubbornArtifact       = "com.krux"               %% "stubborn"             % "1.3.0"
 val metricsGraphite        = "io.dropwizard.metrics"  %  "metrics-graphite"     % "4.0.2"
 val postgreSqlJdbc         = "org.postgresql"         %  "postgresql"           % "42.2.4"
@@ -51,6 +52,7 @@ lazy val core = (project in file("starport-core")).
       hyperionArtifact,
       awsSdkS3,
       awsSdkSES,
+      awsSdkSSM,
       stubbornArtifact,
       metricsGraphite,
       postgreSqlJdbc
