@@ -64,6 +64,7 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
       logger.warn("krux.starport.slack_webhook_url not configured, skip sending slack notification")
   }
 
+  //TODO: bring in changes from https://github.com/krux/starport/commit/f173b088c25dbd6cae6ef13882fd878f7aaf285b
   def run(opts: SubmitPipelineOptions): Unit = {
     def runQuery[T](query: DBIO[T], dryRunOutput: T, force: Boolean = false): T = {
       if (opts.dryRun && !force) {
