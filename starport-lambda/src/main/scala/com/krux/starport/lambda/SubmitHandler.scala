@@ -43,7 +43,8 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] {
         }
       }
     } catch {
-      case _: Throwable => logger.error("lambda error",_)
+      case exit: ExitException => logger.warn("captured System.exit error", exit)
+      case unknown: Throwable => logger.error("unhandled error", unknown)
     } finally {
       logger.info("lambda finished...")
     }
