@@ -23,15 +23,21 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] {
   def handleRequest(input: SubmitRequest, context: Context): SubmitResponse = {
     val outCapture = new ByteArrayOutputStream
     val errCapture = new ByteArrayOutputStream
-    //      Console.withOut(outCapture) {
-    //        Console.withErr(errCapture) {
     logger.info("lambda invoked...")
     try {
-      SubmitPipeline.main(input.getArgs)
+      Console.withOut(outCapture) {
+        Console.withErr(errCapture) {
+          SubmitPipeline.main(input.getArgs)
+        }
+      }
     } catch {
       case unknown: Throwable => logger.error("unhandled error", unknown)
     } finally {
       logger.info("lambda finished...")
+      if (logger.isDebugEnabled()) {
+        if (outCapture.size()>0) logger.info(outCapture.toString)
+        if (errCapture.size()>0) logger.error(errCapture.toString)
+      }
     }
     SubmitResponse(outCapture.toString, errCapture.toString, input)
   }
