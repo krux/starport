@@ -1,9 +1,9 @@
 package com.krux.starport.db.tool
 
 import com.krux.hyperion.expression.Duration
-import com.krux.starport.{BuildInfo}
+import com.krux.starport.BuildInfo
 import org.joda.time.DateTime
-import scopt.OptionParser
+import scopt.{OptionParser}
 import com.krux.starport.cli.Reads
 import com.krux.hyperion.cli.Reads._
 
@@ -17,7 +17,7 @@ object SubmitPipelineOptionParser extends Reads {
 
     head(programName, s"${BuildInfo.version}")
 
-    help("help") text("prints this usage text")
+    help("help")
 
     opt[String]('j', "jar").action((x, c) => c.copy(jar = x))
       .text("the jar to be used")
