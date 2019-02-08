@@ -2,7 +2,6 @@ package com.krux.starport.db.tool
 
 import java.io.File
 import java.net.URLClassLoader
-import java.security.Permission
 
 import com.github.nscala_time.time.Imports._
 import slick.jdbc.PostgresProfile.api._
@@ -12,47 +11,16 @@ import com.krux.starport.config.StarportSettings
 import com.krux.starport.db.record.Pipeline
 import com.krux.starport.db.table.Pipelines
 import com.krux.starport.db.{DateTimeMapped, WaitForIt}
-import com.krux.starport.util.{DateTimeFunctions, S3FileHandler}
+import com.krux.starport.util.{DateTimeFunctions, LambdaNoExitSecurityManager, S3FileHandler}
 import com.krux.starport.util.notification.SendSlackMessage
-
-sealed case class ExitException(status: Int) extends Exception("[substitute for sys.exit]") {}
-
-/**
-  * Override SecurityManager when executing via AWS Lambda, in order to "catch" sys.exit.
-  * Note that in the SubmitPipelineOptionParser * when the --help flag is called execution
-  * flow will still allow the processing of other flags.
-  *
-  * If -Dexecution.context=lambda property must is set, main will enable this class
-  */
-sealed class NoExitSecurityManager extends SecurityManager {
-  override def checkPermission(perm: Permission): Unit = {}
-  override def checkPermission(perm: Permission, context: Object): Unit = {}
-  override def checkExit(status: Int): Unit = {
-    throw ExitException(status)
-  }
-}
 
 object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapped with Logging {
 
   lazy val starportSettings = StarportSettings()
 
   def main(args: Array[String]): Unit = {
-    val executionContext = System.getProperty("execution.context")
-    logger.debug(s"args: ${args.mkString(",")}")
-    logger.debug(s"context: ${executionContext}")
-    if (executionContext == "lambda") {
-      System.setSecurityManager(new NoExitSecurityManager)
-    }
-    SubmitPipelineOptionParser.parse(args, errorHandler).foreach(run)
-  }
-
-  def errorHandler(msg: String, code: Option[Int] = Some(1)): Unit = {
-    code match {
-      case Some(0) =>
-      case Some(4) => logger.error(msg)
-      case _ => logger.error(s"error occurred: ${msg}")
-    }
-    System.exit(code.getOrElse(1))
+    System.setSecurityManager(new LambdaNoExitSecurityManager)
+    SubmitPipelineOptionParser.parse(args).foreach(run)
   }
 
   private def getPipelineSchedule = (jarFile: File, opts: SubmitPipelineOptions) => {

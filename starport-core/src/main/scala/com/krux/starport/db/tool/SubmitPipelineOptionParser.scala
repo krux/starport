@@ -1,19 +1,19 @@
 package com.krux.starport.db.tool
 
 import com.krux.hyperion.expression.Duration
-import com.krux.starport.BuildInfo
+import com.krux.starport.{BuildInfo, ErrorExit, Logging}
 import org.joda.time.DateTime
-import scopt.{OptionParser}
+import scopt.OptionParser
 import com.krux.starport.cli.Reads
 import com.krux.hyperion.cli.Reads._
 
-object SubmitPipelineOptionParser extends Reads {
+object SubmitPipelineOptionParser extends Reads with Logging {
 
   val programName = "submit-pipeline"
 
   private val ValidEmail = """^([a-zA-Z0-9.!#$%&’'*+/=?^_`{|}~-]+)@([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*)$""".r
 
-  def apply(errorHandler:(String, Option[Int]) => Unit): OptionParser[SubmitPipelineOptions] = new OptionParser[SubmitPipelineOptions](programName) {
+  def apply(): OptionParser[SubmitPipelineOptions] = new OptionParser[SubmitPipelineOptions](programName) {
 
     head(programName, s"${BuildInfo.version}")
 
@@ -59,7 +59,7 @@ object SubmitPipelineOptionParser extends Reads {
 
     opt[Unit]('d', "disable").action { (_, c) =>
       if (c.enable.nonEmpty) {
-        errorHandler("You cannot enable and disable a pipeline at the same time",Some(4))
+        ErrorExit.invalidPipelineEnableOptions(logger)
       }
       c.copy(enable = Option(false))
     }
@@ -68,7 +68,7 @@ object SubmitPipelineOptionParser extends Reads {
 
     opt[Unit]('e', "enable").action { (_, c) =>
       if (c.enable.nonEmpty) {
-        errorHandler("You cannot enable and disable a pipeline at the same time",Some(4))
+        ErrorExit.invalidPipelineEnableOptions(logger)
       }
       c.copy(enable = Option(true))
     }
@@ -92,5 +92,5 @@ object SubmitPipelineOptionParser extends Reads {
 
   }
 
-  def parse(args: Array[String],errorHandler:(String, Option[Int]) => Unit): Option[SubmitPipelineOptions] = apply(errorHandler).parse(args, SubmitPipelineOptions())
+  def parse(args: Array[String]): Option[SubmitPipelineOptions] = apply().parse(args, SubmitPipelineOptions())
 }

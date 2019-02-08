@@ -4,8 +4,9 @@ import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 
 import com.amazonaws.services.lambda.runtime.{Context, RequestHandler}
+import com.krux.starport.Logging
 import com.krux.starport.db.tool.SubmitPipeline
-import org.slf4j.LoggerFactory
+import com.krux.starport.util.LambdaExitException
 
 /**
   * Lambda to invoke the com.krux.starport.db.tool.SubmitPipeline util remotely.
@@ -17,36 +18,45 @@ import org.slf4j.LoggerFactory
   * -Dexecution.context=lambda
   *
   */
-class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] {
-
-  def logger = LoggerFactory.getLogger(getClass)
+class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with Logging {
 
   def handleRequest(input: SubmitRequest, context: Context): SubmitResponse = {
     val outCapture = new ByteArrayOutputStream
     val errCapture = new ByteArrayOutputStream
+    val outPrintStream = new PrintStream(outCapture)
+    val errPrintStream = new PrintStream(errCapture)
+    val origOut = System.out
+    val origErr = System.err
+    var status: Int = 0
 
-    logger.info("lambda v05 invoked...")
-
-    Console.withOut(outCapture) {
-      Console.withErr(errCapture) {
-        try {
-          SubmitPipeline.main(input.getArgs)
-        } catch {
-          case unknown: Throwable => {
-            val ps = new PrintStream(errCapture)
-            unknown.printStackTrace(ps)
-            ps.close
-          }
-        }
+    try {
+      System.setErr(errPrintStream)
+      System.setOut(outPrintStream)
+      SubmitPipeline.main(input.getArgs)
+    } catch {
+      case caughtExit: LambdaExitException => {
+        status = caughtExit.status
+        logger.error("exit:", caughtExit)
       }
+      case unhandled: Throwable =>  {
+        status = 255
+        logger.error("exception:",unhandled)
+      }
+    } finally {
+      outPrintStream.flush()
+      outPrintStream.close()
+      errPrintStream.flush()
+      errPrintStream.close()
+      System.setErr(origErr)
+      System.setOut(origOut)
     }
 
-    logger.info("lambda v05 finished...")
-    outCapture.flush()
-    errCapture.flush()
+    //This makes sure the output is also sent to the AWS lambda runtime so it can be
+    //pushed into CloudWatch.
     if (outCapture.size()>0) logger.info(outCapture.toString)
     if (errCapture.size()>0) logger.error(errCapture.toString)
-    SubmitResponse(outCapture.toString, errCapture.toString, input)
+
+    SubmitResponse(outCapture.toString, errCapture.toString, status, input)
   }
 }
 
