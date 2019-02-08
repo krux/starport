@@ -1,6 +1,7 @@
 package com.krux.starport.lambda
 
 import java.io.ByteArrayOutputStream
+import java.io.PrintStream
 
 import com.amazonaws.services.lambda.runtime.{Context, RequestHandler}
 import com.krux.starport.db.tool.SubmitPipeline
@@ -23,22 +24,28 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] {
   def handleRequest(input: SubmitRequest, context: Context): SubmitResponse = {
     val outCapture = new ByteArrayOutputStream
     val errCapture = new ByteArrayOutputStream
-    logger.info("lambda invoked...")
-    try {
-      Console.withOut(outCapture) {
-        Console.withErr(errCapture) {
+
+    logger.info("lambda v05 invoked...")
+
+    Console.withOut(outCapture) {
+      Console.withErr(errCapture) {
+        try {
           SubmitPipeline.main(input.getArgs)
+        } catch {
+          case unknown: Throwable => {
+            val ps = new PrintStream(errCapture)
+            unknown.printStackTrace(ps)
+            ps.close
+          }
         }
       }
-    } catch {
-      case unknown: Throwable => logger.error("unhandled error", unknown)
-    } finally {
-      logger.info("lambda finished...")
-      if (logger.isDebugEnabled()) {
-        if (outCapture.size()>0) logger.info(outCapture.toString)
-        if (errCapture.size()>0) logger.error(errCapture.toString)
-      }
     }
+
+    logger.info("lambda v05 finished...")
+    outCapture.flush()
+    errCapture.flush()
+    if (outCapture.size()>0) logger.info(outCapture.toString)
+    if (errCapture.size()>0) logger.error(errCapture.toString)
     SubmitResponse(outCapture.toString, errCapture.toString, input)
   }
 }

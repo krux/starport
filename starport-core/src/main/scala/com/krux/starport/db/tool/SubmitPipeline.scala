@@ -43,12 +43,7 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
     if (executionContext == "lambda") {
       System.setSecurityManager(new NoExitSecurityManager)
     }
-    SubmitPipelineOptionParser.parse(args, errorHandler) match {
-      case Some(options) => {
-        run(options)
-      }
-      case None =>
-    }
+    SubmitPipelineOptionParser.parse(args, errorHandler).foreach(run)
   }
 
   def errorHandler(msg: String, code: Option[Int] = Some(1)): Unit = {
