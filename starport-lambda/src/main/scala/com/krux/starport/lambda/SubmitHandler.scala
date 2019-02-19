@@ -40,7 +40,7 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
       }
       case unhandled: Throwable =>  {
         status = 255
-        logger.error("exception:",unhandled)
+        logger.error("exception:", unhandled)
       }
     } finally {
       outPrintStream.flush()
@@ -53,8 +53,8 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
 
     //This makes sure the output is also sent to the AWS lambda runtime so it can be
     //pushed into CloudWatch.
-    if (outCapture.size()>0) logger.info(outCapture.toString)
-    if (errCapture.size()>0) logger.error(errCapture.toString)
+    if (outCapture.size() > 0) logger.info(outCapture.toString)
+    if (errCapture.size() > 0) logger.error(errCapture.toString)
 
     SubmitResponse(outCapture.toString, errCapture.toString, status, input)
   }
