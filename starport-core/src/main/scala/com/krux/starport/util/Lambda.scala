@@ -2,12 +2,12 @@ package com.krux.starport.util
 
 import java.security.Permission
 
-sealed case class LambdaExitException(status: Int) extends Exception("[system exit disallowed in AWS Lambda runtime]") {}
+case class LambdaExitException(status: Int) extends Exception("[system exit disallowed in AWS Lambda runtime]") {}
 
 /**
   * Override SecurityManager when executing via AWS Lambda, in order to "catch" sys.exit.
   */
-sealed class LambdaNoExitSecurityManager extends SecurityManager {
+class LambdaNoExitSecurityManager extends SecurityManager {
   override def checkPermission(perm: Permission): Unit = {}
   override def checkPermission(perm: Permission, context: Object): Unit = {}
   override def checkExit(status: Int): Unit = {
