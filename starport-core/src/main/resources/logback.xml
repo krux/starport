@@ -5,7 +5,7 @@
             <pattern>%-5level %d{HH:mm:ss} [%thread] %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
-    <root level="info">
+    <root level="${logger.root.level:-INFO}">
         <appender-ref ref="STDERR"></appender-ref>
     </root>
 </configuration>
