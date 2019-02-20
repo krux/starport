@@ -5,14 +5,17 @@ import java.net.URLClassLoader
 
 import com.github.nscala_time.time.Imports._
 import slick.jdbc.PostgresProfile.api._
+
+import com.krux.hyperion.expression.Duration
 import com.krux.hyperion.{DataPipelineDefGroup, RecurringSchedule, Schedule}
-import com.krux.starport.{ErrorExit, Logging}
 import com.krux.starport.config.StarportSettings
 import com.krux.starport.db.record.Pipeline
 import com.krux.starport.db.table.Pipelines
 import com.krux.starport.db.{DateTimeMapped, WaitForIt}
-import com.krux.starport.util.{DateTimeFunctions, LambdaNoExitSecurityManager, S3FileHandler}
 import com.krux.starport.util.notification.SendSlackMessage
+import com.krux.starport.util.{DateTimeFunctions, LambdaNoExitSecurityManager, S3FileHandler}
+import com.krux.starport.{ErrorExit, Logging}
+
 
 object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapped with Logging {
 
@@ -68,11 +71,10 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
       schedule.start.get.value.left.get.withZone(DateTimeZone.UTC)
     }
 
-    def getPeriodFromSchedule(schedule: RecurringSchedule): Period = {
+    def getPeriodFromSchedule(schedule: RecurringSchedule): Duration = {
       require(schedule.period.value.isLeft, "Starport does not work with expression based period")
       schedule.period.value.left.get
     }
-
 
     // load the class from the jar and print the schedule
     // val jars = Array(new File(opts.jar).toURI.toURL)
