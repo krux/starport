@@ -81,7 +81,7 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
     val jarFile = S3FileHandler.getFileFromS3(opts.jar, opts.baseDir)
     if (opts.cleanUp) jarFile.deleteOnExit
 
-    val (period, start): (Period, DateTime) = (opts.frequency, opts.schedule) match {
+    val (period, start): (Duration, DateTime) = (opts.frequency, opts.schedule) match {
       case (Some(freq), Some(schedule)) =>
         val specifiedSchedule = Schedule
           .cron
