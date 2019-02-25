@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 
 import com.amazonaws.services.lambda.runtime.{Context, RequestHandler}
+
 import com.krux.starport.Logging
 import com.krux.starport.db.tool.SubmitPipeline
 import com.krux.starport.util.LambdaExitException
@@ -19,19 +20,21 @@ import com.krux.starport.util.LambdaExitException
   *
   */
 class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with Logging {
+  val outCapture = new ByteArrayOutputStream
+  val errCapture = new ByteArrayOutputStream
+  val outPrintStream = new PrintStream(outCapture)
+  val errPrintStream = new PrintStream(errCapture)
+  val lambdaOut = System.out
+  val lambdaErr = System.err
+  System.setErr(errPrintStream)
+  System.setOut(outPrintStream)
 
   def handleRequest(input: SubmitRequest, context: Context): SubmitResponse = {
-    val outCapture = new ByteArrayOutputStream
-    val errCapture = new ByteArrayOutputStream
-    val outPrintStream = new PrintStream(outCapture)
-    val errPrintStream = new PrintStream(errCapture)
-    val origOut = System.out
-    val origErr = System.err
     var status: Int = 0
+    var outString = ""
+    var errString = ""
 
     try {
-      System.setErr(errPrintStream)
-      System.setOut(outPrintStream)
       SubmitPipeline.main(input.getArgs)
     } catch {
       case caughtExit: LambdaExitException => {
@@ -44,19 +47,16 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
       }
     } finally {
       outPrintStream.flush()
-      outPrintStream.close()
       errPrintStream.flush()
-      errPrintStream.close()
-      System.setErr(origErr)
-      System.setOut(origOut)
+      outString = outCapture.toString
+      errString = errCapture.toString
+      outCapture.reset()
+      errCapture.reset()
+      lambdaOut.print(outString)
+      lambdaErr.print(errString)
     }
 
-    //This makes sure the output is also sent to the AWS lambda runtime so it can be
-    //pushed into CloudWatch.
-    if (outCapture.size() > 0) logger.info(outCapture.toString)
-    if (errCapture.size() > 0) logger.error(errCapture.toString)
-
-    SubmitResponse(outCapture.toString, errCapture.toString, status, input)
+    SubmitResponse(outString, errString, status, input)
   }
 }
 
