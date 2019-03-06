@@ -9,7 +9,7 @@ import com.krux.starport.db.table.Pipelines
 import com.krux.starport.db.table.ScheduleFailureCounters
 import com.krux.starport.db.WaitForIt
 import com.krux.starport.Logging
-import com.krux.starport.util.notification.Notification
+import com.krux.starport.util.notification.Notify
 
 
 /**
@@ -41,7 +41,7 @@ object ErrorHandler extends Logging with WaitForIt {
           Pipelines().filter(_.id === pipelineId).map(_.isActive).update(false)
 
         db.run(deactivatePipelineQuery).map { _ =>
-          Notification(pipeline.owner).send(
+          Notify(
             s"[ACTION NEEDED] Pipeline ${pipeline.name} has been deactivated due to scheduling failure",
             errorMessage,
             pipeline
@@ -54,7 +54,7 @@ object ErrorHandler extends Logging with WaitForIt {
 
         // Set schedule failure count
         db.run(setScheduleFailureCountQuery).map { _ =>
-          Notification(pipeline.owner).send(
+          Notify(
             s"[ACTION NEEDED] Pipeline ${pipeline.name} failed to schedule ($newCount/$MaxSchedulingFailure)",
             s"It will be deactivated after the number of schedule failures reach $MaxSchedulingFailure\n\n$errorMessage",
             pipeline
@@ -80,7 +80,7 @@ object ErrorHandler extends Logging with WaitForIt {
     (implicit conf: StarportSettings): String = {
     val stackTraceMessage = stackTrace.mkString("\n")
     logger.warn(s"cleanup activity failed for pipeline ${pipeline.id}, because: $stackTraceMessage")
-    Notification(pipeline.owner).send(
+    Notify(
       s"[Starport Cleanup Failure] cleanup activity failed for ${pipeline.name}",
       stackTraceMessage,
       pipeline

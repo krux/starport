@@ -6,7 +6,7 @@ import org.joda.time.DateTime
 import scopt.OptionParser
 import com.krux.starport.cli.Reads
 import com.krux.hyperion.cli.Reads._
-import com.krux.starport.util.notification.Notification
+import com.krux.starport.util.notification.Notify
 
 object SubmitPipelineOptionParser extends Reads with Logging {
 
@@ -81,7 +81,7 @@ object SubmitPipelineOptionParser extends Reads with Logging {
 
     opt[String]('o', "owner").action((x, c) => c.copy(owner = Option(x)))
       .text("the owner's email address or SNS topic ARN")
-      .validate(Notification.isNameValid(_) match {
+      .validate(Notify.isNameValid(_) match {
         case true => success
         case false => failure("Option --owner must be a valid email address or SNS topic ARN")
       })
