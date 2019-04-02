@@ -6,12 +6,13 @@ import org.joda.time.DateTime
 import scopt.OptionParser
 import com.krux.starport.cli.Reads
 import com.krux.hyperion.cli.Reads._
+import com.krux.starport.util.notification.Notify
 
 object SubmitPipelineOptionParser extends Reads with Logging {
 
   val programName = "submit-pipeline"
 
-  private val ValidEmail = """^([a-zA-Z0-9.!#$%&’'*+/=?^_`{|}~-]+)@([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*)$""".r
+
 
   def apply(): OptionParser[SubmitPipelineOptions] = new OptionParser[SubmitPipelineOptions](programName) {
 
@@ -79,10 +80,10 @@ object SubmitPipelineOptionParser extends Reads with Logging {
       .optional()
 
     opt[String]('o', "owner").action((x, c) => c.copy(owner = Option(x)))
-      .text("the owner's email address")
-      .validate(_ match {
-        case ValidEmail(_, _) => success
-        case _ => failure("Option --owner must be a valid email address")
+      .text("the owner's email address or SNS topic ARN")
+      .validate(Notify.isNameValid(_) match {
+        case true => success
+        case false => failure("Option --owner must be a valid email address or SNS topic ARN")
       })
       .optional()
 

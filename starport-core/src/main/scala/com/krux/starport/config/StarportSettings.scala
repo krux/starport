@@ -44,6 +44,8 @@ class StarportSettings(val config: Config) extends Serializable {
   val toEmails: Seq[String] = config.getStringList("krux.starport.notification.email.to").asScala
 
   val fromEmail: String = config.getString("krux.starport.notification.email.from")
+
+  val snsTopicARN: String = config.getString("krux.starport.notification.sns.topic.arn")
 }
 
 object StarportSettings {
