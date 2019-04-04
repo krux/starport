@@ -1,17 +1,15 @@
 package com.krux.starport.util
 
 import scala.concurrent.{ExecutionContext, Future}
-
 import org.joda.time.DateTime
 import slick.jdbc.PostgresProfile.api._
-
 import com.krux.starport.config.StarportSettings
 import com.krux.starport.db.record.{Pipeline, ScheduleFailureCounter}
 import com.krux.starport.db.table.Pipelines
 import com.krux.starport.db.table.ScheduleFailureCounters
 import com.krux.starport.db.WaitForIt
 import com.krux.starport.Logging
-import com.krux.starport.util.notification.SendEmail
+import com.krux.starport.util.notification.Notify
 
 
 /**
@@ -36,8 +34,6 @@ object ErrorHandler extends Logging with WaitForIt {
     val db = conf.jdbc.db
 
     val pipelineId = pipeline.id.get
-    val fromEmail = conf.fromEmail
-    val toEmails = pipeline.owner.map(Seq(_)).getOrElse(conf.toEmails)
 
     def handlePipelineAndNotify(failureCount: Int): Future[String] = {
       if (failureCount >= MaxSchedulingFailure) {  // deactivate the pipeline if it reaches max # of failures
@@ -45,11 +41,10 @@ object ErrorHandler extends Logging with WaitForIt {
           Pipelines().filter(_.id === pipelineId).map(_.isActive).update(false)
 
         db.run(deactivatePipelineQuery).map { _ =>
-          SendEmail(
-            toEmails,
-            fromEmail,
+          Notify(
             s"[ACTION NEEDED] Pipeline ${pipeline.name} has been deactivated due to scheduling failure",
-            errorMessage
+            errorMessage,
+            pipeline
           )
         }
       } else {  // increment the count, and send the notification
@@ -59,11 +54,10 @@ object ErrorHandler extends Logging with WaitForIt {
 
         // Set schedule failure count
         db.run(setScheduleFailureCountQuery).map { _ =>
-          SendEmail(
-            toEmails,
-            fromEmail,
+          Notify(
             s"[ACTION NEEDED] Pipeline ${pipeline.name} failed to schedule ($newCount/$MaxSchedulingFailure)",
-            s"It will be deactivated after the number of schedule failures reach $MaxSchedulingFailure\n\n$errorMessage"
+            s"It will be deactivated after the number of schedule failures reach $MaxSchedulingFailure\n\n$errorMessage",
+            pipeline
           )
         }
       }
@@ -86,11 +80,10 @@ object ErrorHandler extends Logging with WaitForIt {
     (implicit conf: StarportSettings): String = {
     val stackTraceMessage = stackTrace.mkString("\n")
     logger.warn(s"cleanup activity failed for pipeline ${pipeline.id}, because: $stackTraceMessage")
-    SendEmail(
-      conf.toEmails,
-      conf.fromEmail,
+    Notify(
       s"[Starport Cleanup Failure] cleanup activity failed for ${pipeline.name}",
-      stackTraceMessage
+      stackTraceMessage,
+      pipeline
     )
   }
 
