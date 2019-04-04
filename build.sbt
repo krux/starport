@@ -12,10 +12,13 @@ val slf4jApiArtifact       = "org.slf4j"              %  "slf4j-api"            
 val logbackClassicArtifact = "ch.qos.logback"         %  "logback-classic"      % "1.1.7"
 val awsSdkS3               = "com.amazonaws"          %  "aws-java-sdk-s3"      % awsSdkVersion
 val awsSdkSES              = "com.amazonaws"          %  "aws-java-sdk-ses"     % awsSdkVersion
+val awsSdkSSM              = "com.amazonaws"          %  "aws-java-sdk-ssm"     % awsSdkVersion
+val awsSdkSNS              = "com.amazonaws"          %  "aws-java-sdk-sns"     % awsSdkVersion
 val stubbornArtifact       = "com.krux"               %% "stubborn"             % "1.3.0"
 val metricsGraphite        = "io.dropwizard.metrics"  %  "metrics-graphite"     % "4.0.2"
 val postgreSqlJdbc         = "org.postgresql"         %  "postgresql"           % "42.2.4"
-
+val awsLambdaEvents        = "com.amazonaws"          %  "aws-lambda-java-events" % "2.2.1"
+val awsLambdaCore          = "com.amazonaws"          %  "aws-lambda-java-core"   % "1.2.0"
 
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation", "-feature", "-Xlint", "-Xfatal-warnings"),
@@ -29,7 +32,7 @@ lazy val commonSettings = Seq(
 lazy val root = (project in file(".")).
   settings(commonSettings: _*).
   settings(name := "starport").
-  aggregate(core)
+  aggregate(core,lambda)
 
 lazy val core = (project in file("starport-core")).
   settings(commonSettings: _*).
@@ -51,9 +54,25 @@ lazy val core = (project in file("starport-core")).
       hyperionArtifact,
       awsSdkS3,
       awsSdkSES,
+      awsSdkSSM,
+      awsSdkSNS,
       stubbornArtifact,
       metricsGraphite,
       postgreSqlJdbc
     ),
     fork := true
   )
+
+lazy val lambda = (project in file("starport-lambda")).
+  settings(commonSettings: _*).
+  settings(
+    name := "starport-lambda",
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    buildInfoPackage := "com.krux.starport",
+    assemblyJarName in assembly := "starport-lambda.jar",
+    libraryDependencies ++= Seq(
+      awsLambdaCore,
+      awsLambdaEvents,
+    ),
+    fork := true
+  ).dependsOn(core)
