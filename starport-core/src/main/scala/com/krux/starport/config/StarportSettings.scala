@@ -45,7 +45,12 @@ class StarportSettings(val config: Config) extends Serializable {
 
   val fromEmail: String = config.getString("krux.starport.notification.email.from")
 
-  val snsTopicARN: String = config.getString("krux.starport.notification.sns.topic.arn")
+  val snsTopicARN: String = if (config.hasPath("krux.starport.notification.sns_owner")) {
+    config.getString("krux.starport.notification.sns_owner")
+  }
+  else {
+    config.getString("krux.starport.notification.sns")
+  }
 }
 
 object StarportSettings {
