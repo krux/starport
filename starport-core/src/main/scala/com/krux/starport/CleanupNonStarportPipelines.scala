@@ -18,7 +18,7 @@ object CleanupNonStarportPipelines extends StarportActivity {
       cutoffDate: DateTime
     ): Set[String] = {
 
-    logger.info(s"Getting list of old FINISHED non-Starport pipelines from AWS to delete...")
+    logger.info(s"Getting list of old ${pipelineState} non-Starport pipelines from AWS to delete...")
     val dateTimeFormatter = JodaDateTimeFormat.forPattern(AwsDateTimeFormat)
     val inConsoleStarportScheduledPipelineIds = db.run(
         ScheduledPipelines()
