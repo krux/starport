@@ -55,7 +55,7 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
 
     def runQuery[T](query: DBIO[T], dryRunOutput: T, force: Boolean = false): T = {
       if (opts.dryRun && !force) {
-        println("Dry Run. Skip sending the querys...")
+        println("dry run...skipping queries")
         dryRunOutput
       } else {
         val db = starportSettings.jdbc.db
@@ -137,6 +137,7 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
       require(pipelineRecord.owner.nonEmpty, "Owner required for updates")
 
       if (existingPipelines == 0) ErrorExit.pipelineDoesNotExist(logger)
+
       runQuery(
         existingPipelineQuery
           .map(r => (r.name, r.jar, r.isActive, r.retention, r.period, r.end, r.nextRunTime, r.owner, r.backfill))
@@ -155,7 +156,24 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
       )
 
       sendSlackNotification(
-        pipelineRecord.name + " Schedule Updated. Next Run - " + pipelineRecord.nextRunTime
+        pipelineRecord.name + " Schedule updated...next run " + pipelineRecord.nextRunTime
+      )
+
+    } else if (opts.updateJarOnly) {
+
+      if (existingPipelines == 0) ErrorExit.pipelineDoesNotExist(logger)
+
+      runQuery(
+        existingPipelineQuery
+          .map(r => r.jar)
+          .update(
+            opts.jar
+          ),
+        0
+      )
+
+      sendSlackNotification(
+        pipelineRecord.name + " Jar updated to version " + opts.jar
       )
 
     } else if (opts.enable.nonEmpty) {

@@ -9,6 +9,7 @@ case class SubmitPipelineOptions(
   pipelineObject: String = "",
   startNow: Boolean = false,
   update: Boolean = false,
+  updateJarOnly: Boolean = true,
   noBackfill: Boolean = false,
   baseDir: Option[String] = None,
   cleanUp: Boolean = false,

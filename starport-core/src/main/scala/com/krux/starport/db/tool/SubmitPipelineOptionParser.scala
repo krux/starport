@@ -37,6 +37,10 @@ object SubmitPipelineOptionParser extends Reads with Logging {
               |        (if it's previously disabled) instead of insert""".stripMargin)
       .optional()
 
+    opt[Unit]("update-jar-only").action((_, c) => c.copy(updateJarOnly = true))
+      .text("when updating (-u) only update the jar name/location. Use to semantically version jars during deployment")
+      .optional()
+
     opt[Unit]("no-backfill").action((_, c) => c.copy(noBackfill = true))
       .text("do not perform any backfill when scheduling")
       .optional()
