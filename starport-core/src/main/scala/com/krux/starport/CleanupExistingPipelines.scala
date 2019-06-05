@@ -84,7 +84,7 @@ object CleanupExistingPipelines extends StarportActivity {
 
         val awsManagedKeySet = pipelineStatuses.keySet
         logger.info(s"$logPrefix AWS contains ${awsManagedKeySet.size}")
-        val inStarportButNotInAws = awsManagedKeySet -- scheduledPipelines.map(_.awsId)
+        val inStarportButNotInAws = scheduledPipelines.map(_.awsId).toSet -- awsManagedKeySet
         logger.info(s"$logPrefix updating the inConsole status to false for ${inStarportButNotInAws.size} entries")
         inStarportButNotInAws.foreach(updateToNotInConsole)
 
