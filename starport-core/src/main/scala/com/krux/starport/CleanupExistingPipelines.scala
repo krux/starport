@@ -34,6 +34,22 @@ object CleanupExistingPipelines extends StarportActivity {
     result
   }
 
+  private def updateToNotInConsole(awsId: String) = db
+    .run(
+      ScheduledPipelines()
+        .filter(_.awsId === awsId)
+        .map(_.inConsole)
+        .update(false)
+    )
+    .waitForResult
+
+  private def deletePipelineAndUpdateDB(awsId: String): Unit = {
+    // delete the pipeline from console then update the field in the database
+    val clientForSp = AwsClientForId(AwsClient.getClient(), Set(awsId), conf.maxRetry)
+    clientForSp.deletePipelines()
+    updateToNotInConsole(awsId)
+  }
+
   def run() = {
 
     logger.info(s"Getting list of in console pipelines to delete...")
@@ -62,9 +78,15 @@ object CleanupExistingPipelines extends StarportActivity {
 
         // TODO probably better to just use a different logger
         val logPrefix = s"|PipelineId: ${pipelineId}|"
-        logger.info(s"$logPrefix has ${scheduledPipelines.size} in console pipelines.")
+        logger.info(s"$logPrefix has ${scheduledPipelines.size} in console pipelines in DB.")
 
         val pipelineStatuses = AwsDataPipeline.describePipeline(scheduledPipelines.map(_.awsId): _*)
+
+        val awsManagedKeySet = pipelineStatuses.keySet
+        logger.info(s"$logPrefix AWS contains ${awsManagedKeySet.size}")
+        val inStarportButNotInAws = awsManagedKeySet -- scheduledPipelines.map(_.awsId)
+        logger.info(s"$logPrefix updating the inConsole status to false for ${inStarportButNotInAws.size} entries")
+        inStarportButNotInAws.foreach(updateToNotInConsole)
 
         val finishedPipelines = scheduledPipelines.filter { p =>
           pipelineStatuses.get(p.awsId).flatMap(_.pipelineState) == Some(PipelineState.FINISHED)
@@ -78,18 +100,6 @@ object CleanupExistingPipelines extends StarportActivity {
 
         logger.info(s"$logPrefix has ${failedPipelines.size} failed pipelines.")
         logger.info(s"$logPrefix has ${healthyPipelines.size} healthy pipelines.")
-
-        def deletePipelineAndUpdateDB(awsId: String): Unit = {
-          // delete the pipeline from console then update the field in the database
-          val clientForSp = AwsClientForId(AwsClient.getClient(), Set(awsId), conf.maxRetry)
-
-          clientForSp.deletePipelines()
-          val updateStatusQuery = ScheduledPipelines()
-            .filter(_.awsId === awsId)
-            .map(_.inConsole)
-            .update(false)
-          db.run(updateStatusQuery).waitForResult
-        }
 
         // delete the extra healthy pipelines
         healthyPipelines
