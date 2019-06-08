@@ -21,6 +21,9 @@ object CleanupNonStarportOptionParser extends Reads {
 
     opt[Unit]("dryRun").valueName("<dryRun>")
       .action((_, c) => c.copy(dryRun = true))
+
+    opt[Unit]("force").valueName("<force> will ignore if the pipeline is managed by starport or not")
+      .action((_, c) => c.copy(force = true))
   }
 
   def parse(args: Array[String]): Option[CleanupNonStarportOptions] = apply().parse(args, CleanupNonStarportOptions())
