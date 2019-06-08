@@ -21,7 +21,7 @@ val awsLambdaEvents        = "com.amazonaws"          %  "aws-lambda-java-events
 val awsLambdaCore          = "com.amazonaws"          %  "aws-lambda-java-core"   % "1.2.0"
 
 lazy val commonSettings = Seq(
-  scalacOptions ++= Seq("-deprecation", "-feature" , "-Xlint", "-Xfatal-warnings"),
+  scalacOptions ++= Seq("-deprecation", "-feature", "-Xlint", "-Xfatal-warnings"),
   scalaVersion := "2.12.8",
   libraryDependencies += scalaTestArtifact,
   organization := "com.krux",
