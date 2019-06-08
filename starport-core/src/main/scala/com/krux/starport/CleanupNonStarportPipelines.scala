@@ -13,9 +13,10 @@ object CleanupNonStarportPipelines extends StarportActivity {
   final val AwsDateTimeFormat = "yyyy-MM-dd'T'HH:mm:ss"
   final val taskName = "CleanupNonStarportPipelines"
 
-  def nonStarportPipelineIds(
+  def pipelineIdsTobeDeleted(
       pipelineState: PipelineState.State,
-      cutoffDate: DateTime
+      cutoffDate: DateTime,
+      force: Boolean
     ): Set[String] = {
 
     logger.info(s"Getting list of old ${pipelineState} non-Starport pipelines from AWS to delete...")
@@ -30,32 +31,44 @@ object CleanupNonStarportPipelines extends StarportActivity {
     logger.info(s"Retrieved ${inConsoleStarportScheduledPipelineIds.size} in console pipelines from Starport DB.")
 
     def shouldPipelineBeDeleted(pipelineStatus: Option[PipelineStatus]): Boolean = {
-      if (pipelineStatus.flatMap(_.pipelineState) != Some(pipelineState))
-        return false
+      val st = for {
+        ps <- pipelineStatus
+        s <- ps.pipelineState
+        t <- ps.creationTime
+      } yield (s, t)
 
-      pipelineStatus.flatMap(_.creationTime) match {
-        case Some(creationTime) => dateTimeFormatter.parseDateTime(creationTime) < cutoffDate.withTimeAtStartOfDay
-        case None => false
+      st.exists { case (s, t) =>
+        s == pipelineState && dateTimeFormatter.parseDateTime(t) < cutoffDate.withTimeAtStartOfDay
       }
     }
 
-    val nonStarportPipelineIds = AwsDataPipeline.listPipelineIds() -- inConsoleStarportScheduledPipelineIds
-    val pipelineStatuses = AwsDataPipeline.describePipeline(nonStarportPipelineIds.toSeq: _*)
-    nonStarportPipelineIds.filter { pId => shouldPipelineBeDeleted(pipelineStatuses.get(pId)) }
+    val pipelinesInAws =
+      if (force) AwsDataPipeline.listPipelineIds()
+      else AwsDataPipeline.listPipelineIds() -- inConsoleStarportScheduledPipelineIds
+
+    val pipelineStatuses = AwsDataPipeline.describePipeline(pipelinesInAws.toSeq: _*)
+    pipelinesInAws.filter { pId => shouldPipelineBeDeleted(pipelineStatuses.get(pId)) }
   }
 
   def deletePipelines(ids: Set[String], dryRun: Boolean): Unit = {
-    logger.info(s"Deleting ${ids.size} pipelines from AWS.")
-    if (dryRun)
+
+    val query = ScheduledPipelines().filter(sp => sp.inConsole && sp.awsId.inSet(ids))
+
+    if (dryRun) {
       println(s"Dry run option is enabled. Otherwise, these AWS pipeline IDs would be deleted:\n${ids.mkString("\n")}")
-    else
+      val updateCount = db.run(query.length.result).waitForResult
+      println(s"It will also update the status of $updateCount pipeline statuses in DB")
+    } else {
       AwsDataPipeline.deletePipelines(ids)
+      val resultCount = db.run(query.map(_.inConsole).update(false)).waitForResult
+      println(s"Updated $resultCount in DB")
+    }
   }
 
   def run(options: CleanupNonStarportOptions) = {
     logger.info(s"run with options: $options")
 
-    val ids = nonStarportPipelineIds(options.pipelineState, options.cutoffDate)
+    val ids = pipelineIdsTobeDeleted(options.pipelineState, options.cutoffDate, options.force)
     logger.info(s"${ids.size} pipelines found")
 
     deletePipelines(ids, options.dryRun)
