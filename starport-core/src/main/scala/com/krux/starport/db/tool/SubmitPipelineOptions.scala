@@ -9,7 +9,7 @@ case class SubmitPipelineOptions(
   pipelineObject: String = "",
   startNow: Boolean = false,
   update: Boolean = false,
-  updateJarOnly: Boolean = true,
+  updateJarOnly: Boolean = false,
   noBackfill: Boolean = false,
   baseDir: Option[String] = None,
   cleanUp: Boolean = false,
@@ -17,7 +17,10 @@ case class SubmitPipelineOptions(
   frequency: Option[Duration] = None,
   enable: Option[Boolean] = None,
   owner: Option[String] = None,
-  dryRun: Boolean = false ) {
-    def backfill = !noBackfill
+  dryRun: Boolean = false
+) {
+
+  def backfill = !noBackfill
+
 }
 
