@@ -23,7 +23,10 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
 
   def main(args: Array[String]): Unit = {
     System.setSecurityManager(new LambdaNoExitSecurityManager)
-    SubmitPipelineOptionParser.parse(args).foreach(run)
+    SubmitPipelineOptionParser.parse(args) match {
+      case Some(opt) => run(opt)
+      case None => ErrorExit.invalidCommandlineArguments(logger)
+    }
   }
 
   private def getPipelineSchedule = (jarFile: File, opts: SubmitPipelineOptions) => {
