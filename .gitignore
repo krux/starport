@@ -13,3 +13,6 @@ project/plugins/project/
 .lib/
 .idea/
 .DS_Store
+
+# ctags
+.tags
