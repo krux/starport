@@ -230,6 +230,8 @@ object StartScheduledPipelines extends StarportActivity {
       val (status, output, pipelineName) = deployPipeline(
         p, options.scheduledStart, options.scheduledEnd, localJars(p.jar))
 
+      Console.err.print(output)
+      
       if (status == 0) {  // deploy successfully, perform activation
         activatePipeline(p, pipelineName, options.scheduledStart, options.actualStart, options.scheduledEnd)
       } else {  // otherwise handle the failure and send notification

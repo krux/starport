@@ -26,10 +26,8 @@ object ErrorHandler extends Logging with WaitForIt {
    *
    * @return the SES send ID
    */
-  def pipelineScheduleFailed(pipeline: Pipeline, errorMessage: String)
+  def pipelineScheduleFailed(pipeline: Pipeline, allOutput: String)
     (implicit conf: StarportSettings, ec: ExecutionContext): String = {
-
-    logger.warn(s"Failed scheduling pipeline ${pipeline.id} because: $errorMessage")
 
     val db = conf.jdbc.db
 
@@ -43,7 +41,7 @@ object ErrorHandler extends Logging with WaitForIt {
         db.run(deactivatePipelineQuery).map { _ =>
           Notify(
             s"[ACTION NEEDED] Pipeline ${pipeline.name} has been deactivated due to scheduling failure",
-            errorMessage,
+            allOutput,
             pipeline
           )
         }
@@ -56,7 +54,7 @@ object ErrorHandler extends Logging with WaitForIt {
         db.run(setScheduleFailureCountQuery).map { _ =>
           Notify(
             s"[ACTION NEEDED] Pipeline ${pipeline.name} failed to schedule ($newCount/$MaxSchedulingFailure)",
-            s"It will be deactivated after the number of schedule failures reach $MaxSchedulingFailure\n\n$errorMessage",
+            s"It will be deactivated after the number of schedule failures reach $MaxSchedulingFailure\n\n$allOutput",
             pipeline
           )
         }
