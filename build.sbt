@@ -1,4 +1,4 @@
-val awsSdkVersion = "1.11.486"
+val awsSdkVersion = "1.11.618"
 val slickVersion = "3.2.3"
 
 val scalaTestArtifact      = "org.scalatest"          %% "scalatest"            % "3.0.5" % "test"
