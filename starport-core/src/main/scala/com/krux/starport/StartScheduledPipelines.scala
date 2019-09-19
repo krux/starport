@@ -231,15 +231,19 @@ object StartScheduledPipelines extends StarportActivity {
         p, options.scheduledStart, options.scheduledEnd, localJars(p.jar))
 
       Console.err.print(output)
-      
+
       if (status == 0) {  // deploy successfully, perform activation
         activatePipeline(p, pipelineName, options.scheduledStart, options.actualStart, options.scheduledEnd)
+        logger.info(
+          s"deployed pipeline ${p.name} in ${TimeUnit.SECONDS.convert(timerInst.stop(), TimeUnit.NANOSECONDS)}"
+        )
       } else {  // otherwise handle the failure and send notification
         ErrorHandler.pipelineScheduleFailed(p, output)
+        logger.warn(
+          s"failed to deploy pipeline ${p.name} in ${TimeUnit.SECONDS.convert(timerInst.stop(), TimeUnit.NANOSECONDS)}"
+        )
       }
 
-      val nano = timerInst.stop()
-      logger.info(s"deployed pipeline ${p.name} in ${TimeUnit.SECONDS.convert(nano, TimeUnit.NANOSECONDS)}")
     }
 
     db.run(DBIO.seq(

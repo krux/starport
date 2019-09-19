@@ -117,4 +117,44 @@ class DateTimeFunctionsSpec extends WordSpec {
     }
 
   }
+
+
+  "timesTillEnd" should {
+    "generate the correct number of times" in {
+
+      assert(
+        DateTimeFunctions.timesTillEnd(
+          new DateTime("2016-12-18T00:00:00Z"),
+          new DateTime("2016-12-19T00:00:00Z"),
+          1.day
+        ) === 1
+      )
+
+      assert(
+        DateTimeFunctions.timesTillEnd(
+          new DateTime("2016-12-18T00:00:00Z"),
+          new DateTime("2016-12-19T00:00:00Z"),
+          1.hour
+        ) === 24
+      )
+
+      assert(
+        DateTimeFunctions.timesTillEnd(
+          new DateTime("2016-12-18T00:00:00Z"),
+          new DateTime("2016-12-19T00:00:00Z"),
+          30.minutes
+        ) === 48
+      )
+
+      assert(
+        DateTimeFunctions.timesTillEnd(
+          new DateTime("2016-12-18T00:00:00Z"),
+          new DateTime("2016-12-18T01:00:00Z"),
+          1.minutes
+        ) === 60
+      )
+
+    }
+
+  }
 }
