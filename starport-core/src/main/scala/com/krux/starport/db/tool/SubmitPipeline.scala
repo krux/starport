@@ -3,8 +3,6 @@ package com.krux.starport.db.tool
 import java.io.File
 import java.net.URLClassLoader
 
-import scala.util.Try
-
 import com.github.nscala_time.time.Imports._
 import slick.jdbc.PostgresProfile.api._
 
@@ -91,26 +89,17 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
         (getPeriodFromSchedule(specifiedSchedule), getStartTimeFromSchedule(specifiedSchedule))
       case x =>
         val jarFile = S3FileHandler.getFileFromS3(opts.jar, opts.baseDir)
+        if (opts.cleanUp) jarFile.deleteOnExit()
         // if the schedule or frequency are not specified then instantiate the pipeline object and read the schedule variable
-        val pipelineSchedule = Try(getPipelineSchedule(jarFile, opts))
-        if (opts.cleanUp) {
-          logger.info("Cleaning up JAR file...")
-          jarFile.delete()
-        }
-        if (pipelineSchedule.isFailure) {
-          val e = pipelineSchedule.failed.get
-          logger.error(s"${e.getMessage}:\n${e.getStackTrace.mkString("\n")}")
-          ErrorExit.failedScheduleExtraction(logger)
-        }
-        val ps = pipelineSchedule.get
+        val pipelineSchedule = getPipelineSchedule(jarFile, opts)
         // if 'one' of the parameters(schedule / frequency) is specified, then it will override the pipeline's definition of that param
         x match {
           case (Some(freq), None) =>
-            (freq, getStartTimeFromSchedule(ps))
+            (freq, getStartTimeFromSchedule(pipelineSchedule))
           case (None, Some(schedule)) =>
-            (getPeriodFromSchedule(ps), schedule)
+            (getPeriodFromSchedule(pipelineSchedule), schedule)
           case _ =>
-            (getPeriodFromSchedule(ps), getStartTimeFromSchedule(ps))
+            (getPeriodFromSchedule(pipelineSchedule), getStartTimeFromSchedule(pipelineSchedule))
         }
     }
 

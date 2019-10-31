@@ -1,7 +1,6 @@
 package com.krux.starport.lambda
 
-import java.io.ByteArrayOutputStream
-import java.io.PrintStream
+import java.io.{ByteArrayOutputStream, File, PrintStream}
 
 import com.amazonaws.services.lambda.runtime.{Context, RequestHandler}
 
@@ -40,10 +39,12 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
       case caughtExit: LambdaExitException => {
         status = caughtExit.status
         logger.error("exit:", caughtExit)
+        logger.error(scanTmpFiles())
       }
       case unhandled: Throwable =>  {
         status = 255
         logger.error("exception:", unhandled)
+        logger.error(scanTmpFiles())
       }
     } finally {
       outPrintStream.flush()
@@ -57,6 +58,16 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
     }
 
     SubmitResponse(outString, errString, status, input)
+  }
+
+  /**
+   * @return /tmp file listing with size for troubleshooting purposes
+   */
+  private def scanTmpFiles(): String = {
+    new File("/tmp")
+      .listFiles()
+      .map(f => s"${f.getAbsolutePath}: ${f.length()}")
+      .mkString("\n")
   }
 }
 
