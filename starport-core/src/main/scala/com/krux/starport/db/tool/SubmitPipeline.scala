@@ -3,6 +3,8 @@ package com.krux.starport.db.tool
 import java.io.File
 import java.net.URLClassLoader
 
+import scala.util.Try
+
 import com.github.nscala_time.time.Imports._
 import slick.jdbc.PostgresProfile.api._
 
@@ -79,11 +81,6 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
       schedule.period.value.left.get
     }
 
-    // load the class from the jar and print the schedule
-    // val jars = Array(new File(opts.jar).toURI.toURL)
-    val jarFile = S3FileHandler.getFileFromS3(opts.jar, opts.baseDir)
-    if (opts.cleanUp) jarFile.deleteOnExit
-
     val (period, start): (Duration, DateTime) = (opts.frequency, opts.schedule) match {
       case (Some(freq), Some(schedule)) =>
         val specifiedSchedule = Schedule
@@ -93,16 +90,27 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
 
         (getPeriodFromSchedule(specifiedSchedule), getStartTimeFromSchedule(specifiedSchedule))
       case x =>
+        val jarFile = S3FileHandler.getFileFromS3(opts.jar, opts.baseDir)
         // if the schedule or frequency are not specified then instantiate the pipeline object and read the schedule variable
-        val pipelineSchedule = getPipelineSchedule(jarFile, opts)
+        val pipelineSchedule = Try(getPipelineSchedule(jarFile, opts))
+        if (opts.cleanUp) {
+          logger.info("Cleaning up JAR file...")
+          jarFile.delete()
+        }
+        if (pipelineSchedule.isFailure) {
+          val e = pipelineSchedule.failed.get
+          logger.error(s"${e.getMessage}:\n${e.getStackTrace.mkString("\n")}")
+          ErrorExit.failedScheduleExtraction(logger)
+        }
+        val ps = pipelineSchedule.get
         // if 'one' of the parameters(schedule / frequency) is specified, then it will override the pipeline's definition of that param
         x match {
           case (Some(freq), None) =>
-            (freq, getStartTimeFromSchedule(pipelineSchedule))
+            (freq, getStartTimeFromSchedule(ps))
           case (None, Some(schedule)) =>
-            (getPeriodFromSchedule(pipelineSchedule), schedule)
+            (getPeriodFromSchedule(ps), schedule)
           case _ =>
-            (getPeriodFromSchedule(pipelineSchedule), getStartTimeFromSchedule(pipelineSchedule))
+            (getPeriodFromSchedule(ps), getStartTimeFromSchedule(ps))
         }
     }
 

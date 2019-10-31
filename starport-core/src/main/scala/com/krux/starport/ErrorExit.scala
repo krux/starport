@@ -27,4 +27,9 @@ object ErrorExit {
     System.exit(4)
   }
 
+  def failedScheduleExtraction(logger: Logger): Unit = {
+    logger.error("Failed to extract pipeline schedule from JAR file")
+    System.exit(5)
+  }
+
 }
