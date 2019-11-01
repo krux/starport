@@ -79,11 +79,6 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
       schedule.period.value.left.get
     }
 
-    // load the class from the jar and print the schedule
-    // val jars = Array(new File(opts.jar).toURI.toURL)
-    val jarFile = S3FileHandler.getFileFromS3(opts.jar, opts.baseDir)
-    if (opts.cleanUp) jarFile.deleteOnExit
-
     val (period, start): (Duration, DateTime) = (opts.frequency, opts.schedule) match {
       case (Some(freq), Some(schedule)) =>
         val specifiedSchedule = Schedule
@@ -93,6 +88,8 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
 
         (getPeriodFromSchedule(specifiedSchedule), getStartTimeFromSchedule(specifiedSchedule))
       case x =>
+        val jarFile = S3FileHandler.getFileFromS3(opts.jar, opts.baseDir)
+        if (opts.cleanUp) jarFile.deleteOnExit()
         // if the schedule or frequency are not specified then instantiate the pipeline object and read the schedule variable
         val pipelineSchedule = getPipelineSchedule(jarFile, opts)
         // if 'one' of the parameters(schedule / frequency) is specified, then it will override the pipeline's definition of that param
