@@ -13,6 +13,14 @@ object CleanupNonStarportOptionParser extends Reads {
     head(programName)
     help("help").text("prints this usage text")
 
+    opt[Seq[String]]("excludePrefixes").valueName("<excludePrefixes>")
+      .action((x, c) => c.copy(excludePrefixes = x))
+      .required()
+      .validate(x =>
+        if (x.forall(_.trim.nonEmpty)) success
+        else failure("Value <excludePrefixes> must not be empty")
+      )
+
     opt[PipelineState.State]("pipelineState").valueName("<pipelineState>")
       .action((x, c) => c.copy(pipelineState = x))
 
