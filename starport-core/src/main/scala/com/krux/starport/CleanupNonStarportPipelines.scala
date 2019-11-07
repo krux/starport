@@ -13,7 +13,8 @@ object CleanupNonStarportPipelines extends StarportActivity {
   final val AwsDateTimeFormat = "yyyy-MM-dd'T'HH:mm:ss"
   final val taskName = "CleanupNonStarportPipelines"
 
-  def pipelineIdsTobeDeleted(
+  def pipelineIdsToDelete(
+      excludePrefixes: Seq[String],
       pipelineState: PipelineState.State,
       cutoffDate: DateTime,
       force: Boolean
@@ -31,14 +32,17 @@ object CleanupNonStarportPipelines extends StarportActivity {
     logger.info(s"Retrieved ${inConsoleStarportScheduledPipelineIds.size} in console pipelines from Starport DB.")
 
     def shouldPipelineBeDeleted(pipelineStatus: Option[PipelineStatus]): Boolean = {
-      val st = for {
+      val nst = for {
         ps <- pipelineStatus
+        n = ps.name
         s <- ps.pipelineState
         t <- ps.creationTime
-      } yield (s, t)
+      } yield (n, s, t)
 
-      st.exists { case (s, t) =>
-        s == pipelineState && dateTimeFormatter.parseDateTime(t) < cutoffDate.withTimeAtStartOfDay
+      nst.exists { case (n, s, t) =>
+        (force && n.startsWith(conf.pipelinePrefix) || !excludePrefixes.exists(n.startsWith)) &&
+          s == pipelineState &&
+          dateTimeFormatter.parseDateTime(t) < cutoffDate.withTimeAtStartOfDay
       }
     }
 
@@ -68,7 +72,7 @@ object CleanupNonStarportPipelines extends StarportActivity {
   def run(options: CleanupNonStarportOptions) = {
     logger.info(s"run with options: $options")
 
-    val ids = pipelineIdsTobeDeleted(options.pipelineState, options.cutoffDate, options.force)
+    val ids = pipelineIdsToDelete(options.excludePrefixes, options.pipelineState, options.cutoffDate, options.force)
     logger.info(s"${ids.size} pipelines found")
 
     deletePipelines(ids, options.dryRun)

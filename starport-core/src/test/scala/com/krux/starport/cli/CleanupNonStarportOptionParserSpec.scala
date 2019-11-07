@@ -11,6 +11,11 @@ class CleanupNonStarportOptionParserSpec extends WordSpec {
     "args is empty" should {
       val args = Array.empty[String]
 
+      "return empty excludePrefixes" in {
+        val options = CleanupNonStarportOptionParser.parse(args).get
+        assert(options.excludePrefixes === Array.empty[String])
+      }
+
       "return FINISHED as default pipelineState" in {
         val options = CleanupNonStarportOptionParser.parse(args).get
         assert(options.pipelineState === PipelineState.FINISHED)
@@ -33,12 +38,19 @@ class CleanupNonStarportOptionParserSpec extends WordSpec {
     }
     "args is valid" should {
       val args = Array(
+        "--excludePrefix",
+        "sp_",
         "--pipelineState",
         "PENDING",
         "--cutoffDate",
         "2017-06-30T00:00:00Z",
         "--dryRun"
       )
+
+      "parse excludePrefixes" in {
+        val options = CleanupNonStarportOptionParser.parse(args).get
+        assert(options.excludePrefixes === Seq("sp_"))
+      }
 
       "parse pipelineState" in {
         val options = CleanupNonStarportOptionParser.parse(args).get
@@ -58,6 +70,29 @@ class CleanupNonStarportOptionParserSpec extends WordSpec {
       "parse dryRun" in {
         val options = CleanupNonStarportOptionParser.parse(args).get
         assert(options.dryRun)
+      }
+    }
+    "multiple excludePrefixes" should {
+      val args = Array(
+        "--excludePrefix",
+        "sp_env1_",
+        "--excludePrefix",
+        "sp_env2_"
+      )
+
+      "parse multiple excludePrefixes" in {
+        val options = CleanupNonStarportOptionParser.parse(args).get
+        assert(options.excludePrefixes === Seq("sp_env1_", "sp_env2_"))
+      }
+    }
+    "excludePrefix is not valid" should {
+      val args = Array(
+        "--excludePrefix",
+        ""
+      )
+
+      "return None" in {
+        assert(CleanupNonStarportOptionParser.parse(args) === None)
       }
     }
     "pipelineState is not valid" should {

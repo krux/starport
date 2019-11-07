@@ -6,6 +6,7 @@ import com.amazonaws.services.datapipeline.model.PipelineDescription
 
 case class PipelineStatus(
   awsId: String,
+  name: String,
   healthStatus: Option[String],
   pipelineState: Option[PipelineState.State],
   creationTime: Option[String]
@@ -25,6 +26,7 @@ object PipelineStatus {
 
     new PipelineStatus(
       awsId,
+      desc.getName,
       fields.get(HealthStatusKey),
       fields.get(PipelineStateKey).map(PipelineState.withName),
       fields.get(CreationTimeKey)
