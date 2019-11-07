@@ -75,11 +75,14 @@ class CleanupNonStarportOptionParserSpec extends WordSpec {
     "multiple excludePrefixes" should {
       val args = Array(
         "--excludePrefix",
-        ""
+        "sp_env1_",
+        "--excludePrefix",
+        "sp_env2_"
       )
 
       "parse multiple excludePrefixes" in {
-        assert(CleanupNonStarportOptionParser.parse(args) === None)
+        val options = CleanupNonStarportOptionParser.parse(args).get
+        assert(options.excludePrefixes === Seq("sp_env1_", "sp_env2_"))
       }
     }
     "excludePrefix is not valid" should {
