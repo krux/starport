@@ -40,7 +40,7 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
   private def cleanupJar(jarFile: File, opts: SubmitPipelineOptions): Unit = {
     if (opts.cleanUp) {
       logger.info(s"Cleaning up JAR file...")
-      jarFile.deleteOnExit()
+      jarFile.deleteOnExit() // In case of some uncaught exceptions, this will clean up the file at JVM level.
       jarFile.delete()
     } else {
       logger.info(s"Skipping JAR cleanup...")
