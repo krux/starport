@@ -37,6 +37,16 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
     pipelineDef.getField("MODULE$").get(null).asInstanceOf[DataPipelineDefGroup].schedule.asInstanceOf[RecurringSchedule]
   }
 
+  private def cleanupJar(jarFile: File, opts: SubmitPipelineOptions): Unit = {
+    if (opts.cleanUp) {
+      logger.info(s"Cleaning up JAR file...")
+      jarFile.deleteOnExit()
+      jarFile.delete()
+    } else {
+      logger.info(s"Skipping JAR cleanup...")
+    }
+  }
+
   private def sendSlackNotification(message: String) = starportSettings.slackWebhookURL match {
     case Some(webhook) =>
       logger.info("Sending Slack Notification")
@@ -89,20 +99,24 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
         (getPeriodFromSchedule(specifiedSchedule), getStartTimeFromSchedule(specifiedSchedule))
       case x =>
         val jarFile = S3FileHandler.getFileFromS3(opts.jar, opts.baseDir)
-        // if the schedule or frequency are not specified then instantiate the pipeline object and read the schedule variable
-        val pipelineSchedule = getPipelineSchedule(jarFile, opts)
-        if (opts.cleanUp) {
-          jarFile.deleteOnExit()
-          jarFile.delete()
-        }
-        // if 'one' of the parameters(schedule / frequency) is specified, then it will override the pipeline's definition of that param
-        x match {
-          case (Some(freq), None) =>
-            (freq, getStartTimeFromSchedule(pipelineSchedule))
-          case (None, Some(schedule)) =>
-            (getPeriodFromSchedule(pipelineSchedule), schedule)
-          case _ =>
-            (getPeriodFromSchedule(pipelineSchedule), getStartTimeFromSchedule(pipelineSchedule))
+
+        try {
+          // if the schedule or frequency are not specified then instantiate the pipeline object and read the schedule variable
+          val pipelineSchedule = getPipelineSchedule(jarFile, opts)
+          cleanupJar(jarFile, opts)
+          // if 'one' of the parameters(schedule / frequency) is specified, then it will override the pipeline's definition of that param
+          x match {
+            case (Some(freq), None) =>
+              (freq, getStartTimeFromSchedule(pipelineSchedule))
+            case (None, Some(schedule)) =>
+              (getPeriodFromSchedule(pipelineSchedule), schedule)
+            case _ =>
+              (getPeriodFromSchedule(pipelineSchedule), getStartTimeFromSchedule(pipelineSchedule))
+          }
+        } catch {
+          case e: Throwable =>
+            cleanupJar(jarFile, opts)
+            throw e
         }
     }
 
