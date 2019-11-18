@@ -19,6 +19,7 @@ val metricsGraphite        = "io.dropwizard.metrics"  %  "metrics-graphite"     
 val postgreSqlJdbc         = "org.postgresql"         %  "postgresql"           % "42.2.4"
 val awsLambdaEvents        = "com.amazonaws"          %  "aws-lambda-java-events" % "2.2.1"
 val awsLambdaCore          = "com.amazonaws"          %  "aws-lambda-java-core"   % "1.2.0"
+val cloudwatchMetrics      = "io.github.azagniotov"   %  "dropwizard-metrics-cloudwatch" % "2.0.2"
 
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation", "-feature", "-Xlint", "-Xfatal-warnings"),
@@ -58,7 +59,8 @@ lazy val core = (project in file("starport-core")).
       awsSdkSNS,
       stubbornArtifact,
       metricsGraphite,
-      postgreSqlJdbc
+      postgreSqlJdbc,
+      cloudwatchMetrics
     ),
     fork := true
   )
