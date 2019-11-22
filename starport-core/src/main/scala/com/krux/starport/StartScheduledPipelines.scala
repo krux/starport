@@ -15,7 +15,7 @@ import com.krux.hyperion.expression.{Duration => HDuration}
 import com.krux.starport.cli.{SchedulerOptions, SchedulerOptionParser}
 import com.krux.starport.db.record.{Pipeline, ScheduledPipeline, SchedulerMetric}
 import com.krux.starport.db.table.{ScheduledPipelines, Pipelines, SchedulerMetrics, ScheduleFailureCounters}
-import com.krux.starport.metric.{ConstantValueGauge, SimpleTimerGauge, MetricSettings}
+import com.krux.starport.metric.{ConstantValueGauge, SimpleTimerGauge, GraphiteReporterSettings}
 import com.krux.starport.util.{S3FileHandler, ErrorHandler}
 
 
@@ -263,7 +263,7 @@ object StartScheduledPipelines extends StarportActivity {
     val mainTimer = new SimpleTimerGauge(TimeUnit.MINUTES)
     metrics.register("gauges.runtime", mainTimer)
 
-    val reporter = MetricSettings.getReporter(conf.metricSettings, metrics)
+    val reporter = GraphiteReporterSettings.getReporter(conf.metricSettings, metrics)
 
     try {
       SchedulerOptionParser.parse(args) match {

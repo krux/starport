@@ -3,12 +3,11 @@ package com.krux.starport
 import com.codahale.metrics.MetricRegistry
 import com.github.nscala_time.time.Imports._
 import slick.jdbc.PostgresProfile.api._
-
 import com.krux.hyperion.client.{AwsClient, AwsClientForId}
 import com.krux.starport.db.record.FailedPipeline
 import com.krux.starport.db.table.{FailedPipelines, Pipelines, ScheduledPipelines}
-import com.krux.starport.metric.{ConstantValueGauge, MetricSettings}
-import com.krux.starport.util.{AwsDataPipeline, PipelineState, ErrorHandler}
+import com.krux.starport.metric.{ConstantValueGauge, GraphiteReporterSettings}
+import com.krux.starport.util.{AwsDataPipeline, ErrorHandler, PipelineState}
 
 
 /**
@@ -155,7 +154,7 @@ object CleanupExistingPipelines extends StarportActivity {
 
   def main(args: Array[String]): Unit = {
 
-    val reporter = MetricSettings.getReporter(conf.metricSettings, metrics)
+    val reporter = GraphiteReporterSettings.getReporter(conf.metricSettings, metrics)
 
     val start = System.nanoTime
     try {
