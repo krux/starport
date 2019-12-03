@@ -5,23 +5,22 @@ import java.util.concurrent.{ForkJoinPool, TimeUnit}
 import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.sys.process._
-
 import com.codahale.metrics.MetricRegistry
 import com.github.nscala_time.time.Imports._
 import slick.jdbc.PostgresProfile.api._
-
-import com.krux.hyperion.client.{AwsClientForName, AwsClient}
+import com.krux.hyperion.client.{AwsClient, AwsClientForName}
 import com.krux.hyperion.expression.{Duration => HDuration}
-import com.krux.starport.cli.{SchedulerOptions, SchedulerOptionParser}
+import com.krux.starport.cli.{SchedulerOptionParser, SchedulerOptions}
 import com.krux.starport.db.record.{Pipeline, ScheduledPipeline, SchedulerMetric}
-import com.krux.starport.db.table.{ScheduledPipelines, Pipelines, SchedulerMetrics, ScheduleFailureCounters}
-import com.krux.starport.metric.{ConstantValueGauge, SimpleTimerGauge, GraphiteReporterSettings}
-import com.krux.starport.util.{S3FileHandler, ErrorHandler}
-
+import com.krux.starport.db.table.{Pipelines, ScheduleFailureCounters, ScheduledPipelines, SchedulerMetrics}
+import com.krux.starport.metric.{ConstantValueGauge, MetricSettings, SimpleTimerGauge}
+import com.krux.starport.util.{ErrorHandler, S3FileHandler}
 
 object StartScheduledPipelines extends StarportActivity {
 
   val metrics = new MetricRegistry()
+
+  lazy val reportingEngine: MetricSettings = conf.metricsEngine
 
   val scheduleTimer = metrics.timer("timers.pipeline_scheduling_time")
 
@@ -263,7 +262,10 @@ object StartScheduledPipelines extends StarportActivity {
     val mainTimer = new SimpleTimerGauge(TimeUnit.MINUTES)
     metrics.register("gauges.runtime", mainTimer)
 
-    val reporter = GraphiteReporterSettings.getReporter(conf.metricSettings, metrics)
+    val reporter = conf.metricSettings match {
+      case Some(config) => reportingEngine.getReporter(config, metrics)
+      case None => reportingEngine.getDefaultReporter(metrics)
+    }
 
     try {
       SchedulerOptionParser.parse(args) match {
