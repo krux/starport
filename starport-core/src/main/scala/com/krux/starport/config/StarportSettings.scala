@@ -19,7 +19,7 @@ class StarportSettings(val config: Config) extends Serializable {
   val starportNotificationSns = config.getString("krux.starport.notification.sns")
 
   val metricsEngine: MetricSettings =
-    Try(config.getConfig("krux.starport.metric.engine")) match {
+    Try(config.getString("krux.starport.metric.engine")) match {
       case Success(engine) => engine match {
         case s if (s == "graphite") => GraphiteReporterSettings
         case s if (s == "cloudwatch") => CloudWatchReporterSettings
@@ -27,7 +27,7 @@ class StarportSettings(val config: Config) extends Serializable {
       case Failure(_) => throw new InstantiationException("No metrics engine specified.")
     }
 
-  val metricSettings: Option[Config] = metricsEngine match {
+  val metricConfig: Option[Config] = metricsEngine match {
       case GraphiteReporterSettings => Try(config.getConfig("krux.starport.metric.graphite")).toOption
       case CloudWatchReporterSettings => Try(config.getConfig("krux.starport.metric.cloudwatch")).toOption
    }

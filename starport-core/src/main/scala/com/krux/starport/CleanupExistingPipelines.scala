@@ -156,7 +156,7 @@ object CleanupExistingPipelines extends StarportActivity {
 
   def main(args: Array[String]): Unit = {
 
-    val reporter = conf.metricSettings match {
+    val reporter = conf.metricConfig match {
       case Some(config) => reportingEngine.getReporter(config, metrics)
       case None => reportingEngine.getDefaultReporter(metrics)
     }

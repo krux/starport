@@ -2,6 +2,8 @@ package com.krux.starport.metric
 
 import java.util.concurrent.TimeUnit
 
+import com.amazonaws.auth.SdkClock.Instance
+
 import scala.util.Random
 import com.codahale.metrics.graphite.{Graphite, GraphiteReporter}
 import com.codahale.metrics.{ConsoleReporter, MetricFilter, MetricRegistry, ScheduledReporter}
@@ -13,7 +15,7 @@ import software.amazon.awssdk.services.cloudwatch.model.StandardUnit
 import com.typesafe.config.Config
 
 /**
- * A service trait that used by private case class constructors.
+ * A service trait that is used by private case class constructors.
  */
 trait MetricSettingsImpl extends Serializable {
 
@@ -73,9 +75,12 @@ final case object CloudWatchReporterSettings extends MetricSettings {
 
   private case class CloudWatchReporterSettingsImpl(config: Config) extends MetricSettingsImpl {
 
-    def awsCloudWatchAsync: CloudWatchAsyncClient = CloudWatchAsyncClient
+    val awsRegion: Region = config.getString("region").toString.asInstanceOf[Region]
+    val awsEnvironment: Instance = config.getString("environment").toString.asInstanceOf[Instance]
+
+    val awsCloudWatchAsync: CloudWatchAsyncClient = CloudWatchAsyncClient
       .builder
-      .region(config.getConfig("region").toString.asInstanceOf[Region])
+      .region(awsRegion)
       .build
 
     def getReporter(metricRegistry: MetricRegistry): CloudWatchReporter = CloudWatchReporter
@@ -95,7 +100,7 @@ final case object CloudWatchReporterSettings extends MetricSettings {
       .withHighResolution
       .withMeterUnitSentToCW(StandardUnit.BYTES)
       .withJvmMetrics
-      .withGlobalDimensions("Region=us-west-2", "Instance=stage")
+      .withGlobalDimensions(s"Region=${awsRegion}", s"Instance=${awsEnvironment}")
       .withDryRun
       .build
 

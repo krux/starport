@@ -262,7 +262,7 @@ object StartScheduledPipelines extends StarportActivity {
     val mainTimer = new SimpleTimerGauge(TimeUnit.MINUTES)
     metrics.register("gauges.runtime", mainTimer)
 
-    val reporter = conf.metricSettings match {
+    val reporter = conf.metricConfig match {
       case Some(config) => reportingEngine.getReporter(config, metrics)
       case None => reportingEngine.getDefaultReporter(metrics)
     }
