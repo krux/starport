@@ -2,8 +2,6 @@ package com.krux.starport.metric
 
 import java.util.concurrent.TimeUnit
 
-import com.amazonaws.auth.SdkClock.Instance
-
 import scala.util.Random
 import com.codahale.metrics.graphite.{Graphite, GraphiteReporter}
 import com.codahale.metrics.{ConsoleReporter, MetricFilter, MetricRegistry, ScheduledReporter}
@@ -75,8 +73,8 @@ final case object CloudWatchReporterSettings extends MetricSettings {
 
   private case class CloudWatchReporterSettingsImpl(config: Config) extends MetricSettingsImpl {
 
-    val awsRegion: Region = config.getString("region").toString.asInstanceOf[Region]
-    val awsEnvironment: Instance = config.getString("environment").toString.asInstanceOf[Instance]
+    val awsRegion: Region = config.getString("region").asInstanceOf[Region]
+    val awsEnvironment = config.getString("environment")
 
     val awsCloudWatchAsync: CloudWatchAsyncClient = CloudWatchAsyncClient
       .builder
