@@ -73,7 +73,7 @@ final case object CloudWatchReporterSettings extends MetricSettings {
 
   private case class CloudWatchReporterSettingsImpl(config: Config) extends MetricSettingsImpl {
 
-    val awsRegion: Region = config.getString("region").asInstanceOf[Region]
+    val awsRegion: Region = Region.of(config.getString("region"))
     val awsEnvironment = config.getString("environment")
 
     val awsCloudWatchAsync: CloudWatchAsyncClient = CloudWatchAsyncClient
