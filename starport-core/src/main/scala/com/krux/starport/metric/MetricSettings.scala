@@ -74,7 +74,7 @@ final case object CloudWatchReporterSettings extends MetricSettings {
   private case class CloudWatchReporterSettingsImpl(config: Config) extends MetricSettingsImpl {
 
     val awsRegion: Region = Region.of(config.getString("region"))
-    val awsEnvironment = config.getString("environment")
+    val prefix = config.getString("krux.starport.prefix")
 
     val awsCloudWatchAsync: CloudWatchAsyncClient = CloudWatchAsyncClient
       .builder
@@ -98,8 +98,7 @@ final case object CloudWatchReporterSettings extends MetricSettings {
       .withHighResolution
       .withMeterUnitSentToCW(StandardUnit.BYTES)
       .withJvmMetrics
-      .withGlobalDimensions(s"Region=${awsRegion}", s"Instance=${awsEnvironment}")
-      .withDryRun
+      .withGlobalDimensions(s"Environment=s{$prefix}")
       .build
 
   }
