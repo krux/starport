@@ -5,10 +5,10 @@ import scopt.OptionParser
 
 import com.krux.starport.util.PipelineState
 
-object CleanupNonStarportOptionParser extends Reads {
-  val programName = "start-scheduled-pipelines"
+object CleanupUnmanagedOptionParser extends Reads {
+  val programName = "cleanup-unmanaged-pipelines"
 
-  def apply(): OptionParser[CleanupNonStarportOptions] = new OptionParser[CleanupNonStarportOptions](programName) {
+  def apply(): OptionParser[CleanupUnmanagedOptions] = new OptionParser[CleanupUnmanagedOptions](programName) {
 
     head(programName)
     help("help").text("prints this usage text")
@@ -34,6 +34,6 @@ object CleanupNonStarportOptionParser extends Reads {
       .action((_, c) => c.copy(force = true))
   }
 
-  def parse(args: Array[String]): Option[CleanupNonStarportOptions] = apply().parse(args, CleanupNonStarportOptions())
+  def parse(args: Array[String]): Option[CleanupUnmanagedOptions] = apply().parse(args, CleanupUnmanagedOptions())
 
 }
