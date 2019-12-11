@@ -5,13 +5,12 @@ import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat => JodaDateTimeFormat}
 import slick.jdbc.PostgresProfile.api._
 
-import com.krux.starport.cli.{CleanupNonStarportOptionParser, CleanupNonStarportOptions}
+import com.krux.starport.cli.{CleanupUnmanagedOptionParser, CleanupUnmanagedOptions}
 import com.krux.starport.db.table.ScheduledPipelines
 import com.krux.starport.util.{AwsDataPipeline, PipelineStatus, PipelineState}
 
-object CleanupNonStarportPipelines extends StarportActivity {
+object CleanupUnmanagedPipelines extends StarportActivity {
   final val AwsDateTimeFormat = "yyyy-MM-dd'T'HH:mm:ss"
-  final val taskName = "CleanupNonStarportPipelines"
 
   def pipelineIdsToDelete(
       excludePrefixes: Seq[String],
@@ -20,7 +19,7 @@ object CleanupNonStarportPipelines extends StarportActivity {
       force: Boolean
     ): Set[String] = {
 
-    logger.info(s"Getting list of old ${pipelineState} non-Starport pipelines from AWS to delete...")
+    logger.info(s"Getting list of old ${pipelineState} unmanaged pipelines from AWS to delete...")
     val dateTimeFormatter = JodaDateTimeFormat.forPattern(AwsDateTimeFormat)
     val inConsoleStarportScheduledPipelineIds = db.run(
         ScheduledPipelines()
@@ -69,7 +68,7 @@ object CleanupNonStarportPipelines extends StarportActivity {
     }
   }
 
-  def run(options: CleanupNonStarportOptions) = {
+  def run(options: CleanupUnmanagedOptions) = {
     logger.info(s"run with options: $options")
 
     val ids = pipelineIdsToDelete(options.excludePrefixes, options.pipelineState, options.cutoffDate, options.force)
@@ -80,11 +79,11 @@ object CleanupNonStarportPipelines extends StarportActivity {
 
   def main(args: Array[String]): Unit = {
     val start = System.nanoTime()
-    CleanupNonStarportOptionParser.parse(args) match {
+    CleanupUnmanagedOptionParser.parse(args) match {
       case Some(options) => run(options)
       case None => ErrorExit.invalidCommandlineArguments(logger)
     }
     val timeSpan = (System.nanoTime - start) / 1E9
-    logger.info(s"All old and FINISHED non-Starport pipelines cleaned up in $timeSpan seconds")
+    logger.info(s"All old and FINISHED unmanaged pipelines cleaned up in $timeSpan seconds")
   }
 }

@@ -25,8 +25,6 @@ object StartScheduledPipelines extends StarportActivity {
 
   val scheduleTimer = metrics.timer("timers.pipeline_scheduling_time")
 
-  val taskName = "StartScheduledPipelines"
-
   val extraEnvs = conf.extraEnvs.toSeq
 
   /**

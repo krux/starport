@@ -17,8 +17,6 @@ import com.krux.starport.util.{AwsDataPipeline, PipelineState, ErrorHandler}
  */
 object CleanupExistingPipelines extends StarportActivity {
 
-  val taskName = "CleanupExistingPipelines"
-
   val metrics = new MetricRegistry()
 
   def activePipelineRecords(): Int = {
