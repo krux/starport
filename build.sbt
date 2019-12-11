@@ -14,12 +14,13 @@ val awsSdkS3               = "com.amazonaws"          %  "aws-java-sdk-s3"      
 val awsSdkSES              = "com.amazonaws"          %  "aws-java-sdk-ses"     % awsSdkVersion
 val awsSdkSSM              = "com.amazonaws"          %  "aws-java-sdk-ssm"     % awsSdkVersion
 val awsSdkSNS              = "com.amazonaws"          %  "aws-java-sdk-sns"     % awsSdkVersion
+val awsSdkCloudWatch       = "com.amazonaws"          %  "aws-java-sdk-cloudwatch"     % awsSdkVersion
 val stubbornArtifact       = "com.krux"               %% "stubborn"             % "1.3.0"
 val metricsGraphite        = "io.dropwizard.metrics"  %  "metrics-graphite"     % "4.0.2"
 val postgreSqlJdbc         = "org.postgresql"         %  "postgresql"           % "42.2.4"
 val awsLambdaEvents        = "com.amazonaws"          %  "aws-lambda-java-events" % "2.2.1"
 val awsLambdaCore          = "com.amazonaws"          %  "aws-lambda-java-core"   % "1.2.0"
-val cloudwatchMetrics      = "io.github.azagniotov"   %  "dropwizard-metrics-cloudwatch" % "2.0.2"
+val cloudwatchMetrics      = "io.github.azagniotov"   %  "dropwizard-metrics-cloudwatch" % "1.0.13"
 
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation", "-feature", "-Xlint", "-Xfatal-warnings"),
@@ -27,11 +28,11 @@ lazy val commonSettings = Seq(
   libraryDependencies += scalaTestArtifact,
   organization := "com.krux",
   test in assembly := {},  // skip test during assembly
-  publishMavenStyle := true,
-  assemblyMergeStrategy in assembly := {
-    case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-    case x => MergeStrategy.first
-  }
+  publishMavenStyle := true
+  //assemblyMergeStrategy in assembly := {
+  //  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  //  case x => MergeStrategy.first
+ // }
 )
 
 lazy val root = (project in file(".")).
@@ -61,6 +62,7 @@ lazy val core = (project in file("starport-core")).
       awsSdkSES,
       awsSdkSSM,
       awsSdkSNS,
+      awsSdkCloudWatch,
       stubbornArtifact,
       metricsGraphite,
       postgreSqlJdbc,

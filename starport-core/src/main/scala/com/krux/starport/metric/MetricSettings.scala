@@ -7,9 +7,9 @@ import com.codahale.metrics.graphite.{Graphite, GraphiteReporter}
 import com.codahale.metrics.{ConsoleReporter, MetricFilter, MetricRegistry, ScheduledReporter}
 import io.github.azagniotov.metrics.reporter.cloudwatch.CloudWatchReporter
 import io.github.azagniotov.metrics.reporter.cloudwatch.CloudWatchReporter.Percentile
-import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient
-import software.amazon.awssdk.services.cloudwatch.model.StandardUnit
+import com.amazonaws.regions.{Region, Regions}
+import com.amazonaws.services.cloudwatch.model.StandardUnit
+import com.amazonaws.services.cloudwatch.{AmazonCloudWatchAsync, AmazonCloudWatchAsyncClientBuilder}
 import com.typesafe.config.Config
 
 /**
@@ -73,33 +73,33 @@ final case object CloudWatchReporterSettings extends MetricSettings {
 
   private case class CloudWatchReporterSettingsImpl(config: Config) extends MetricSettingsImpl {
 
-    val awsRegion: Region = Region.of(config.getString("region"))
-    val prefix = config.getString("krux.starport.prefix")
+    val awsRegion: Region = Region.getRegion(Regions.US_WEST_2)
+    val prefix = config.getString("prefix")
+    val environment = s"Environment=${prefix}"
 
-    val awsCloudWatchAsync: CloudWatchAsyncClient = CloudWatchAsyncClient
-      .builder
-      .region(awsRegion)
-      .build
+    val awsCloudWatchAsync: AmazonCloudWatchAsync = AmazonCloudWatchAsyncClientBuilder
+      .standard()
+      .withRegion(Regions.US_WEST_2)
+      .build()
 
     def getReporter(metricRegistry: MetricRegistry): CloudWatchReporter = CloudWatchReporter
-      .forRegistry(metricRegistry, awsCloudWatchAsync, classOf[Nothing].getName)
+      .forRegistry(metricRegistry, awsCloudWatchAsync, "STARPORT")
       .convertRatesTo(TimeUnit.SECONDS).convertDurationsTo(TimeUnit.MILLISECONDS)
       .filter(MetricFilter.ALL)
       .withPercentiles(Percentile.P75, Percentile.P99)
-      .withOneMinuteMeanRate
-      .withFiveMinuteMeanRate
-      .withFifteenMinuteMeanRate
-      .withMeanRate
-      .withArithmeticMean
-      .withStdDev
-      .withStatisticSet
-      .withZeroValuesSubmission
-      .withReportRawCountValue
-      .withHighResolution
-      .withMeterUnitSentToCW(StandardUnit.BYTES)
-      .withJvmMetrics
-      .withGlobalDimensions(s"Environment=s{$prefix}")
-      .build
+      .withOneMinuteMeanRate()
+      .withFiveMinuteMeanRate()
+      .withFifteenMinuteMeanRate()
+      .withMeanRate()
+      .withArithmeticMean()
+      .withStdDev()
+      .withStatisticSet()
+      .withZeroValuesSubmission()
+      .withReportRawCountValue()
+      .withHighResolution()
+      .withMeterUnitSentToCW(StandardUnit.Bytes)
+      .withGlobalDimensions(environment)
+      .build()
 
   }
 
