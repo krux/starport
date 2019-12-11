@@ -27,7 +27,11 @@ lazy val commonSettings = Seq(
   libraryDependencies += scalaTestArtifact,
   organization := "com.krux",
   test in assembly := {},  // skip test during assembly
-  publishMavenStyle := true
+  publishMavenStyle := true,
+  assemblyMergeStrategy in assembly := {
+    case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+    case x => MergeStrategy.first
+  }
 )
 
 lazy val root = (project in file(".")).
