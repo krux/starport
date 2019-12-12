@@ -14,12 +14,9 @@ object SummarizeUnmanagedPipelines extends StarportActivity {
 
     logger.info("Unmanaged Pipeline Count By Date:")
     pipelineStatuses.values
-      .map { status =>
-        val date = status.creationTime.flatMap(_.split("T").headOption).getOrElse("Unknown")
-        (date, 1)
-      }
-      .groupBy(_._1)
-      .mapValues(_.map(_._2).sum)
+      .map(status => status.creationTime.flatMap(_.split("T").headOption).getOrElse("Unknown"))
+      .groupBy(identity)
+      .mapValues(_.size)
       .toSeq
       .sortBy(_._1)(Ordering[String].reverse)
       .foreach { case (date, count) => logger.info(s"$date -> $count") }
