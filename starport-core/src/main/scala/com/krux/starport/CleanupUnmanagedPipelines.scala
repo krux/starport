@@ -21,14 +21,6 @@ object CleanupUnmanagedPipelines extends StarportActivity {
 
     logger.info(s"Getting list of old ${pipelineState} unmanaged pipelines from AWS to delete...")
     val dateTimeFormatter = JodaDateTimeFormat.forPattern(AwsDateTimeFormat)
-    val inConsoleStarportScheduledPipelineIds = db.run(
-        ScheduledPipelines()
-          .filter(_.inConsole)
-          .distinctOn(_.awsId)
-          .result
-      ).waitForResult.map(_.awsId).toSet
-
-    logger.info(s"Retrieved ${inConsoleStarportScheduledPipelineIds.size} in console pipelines from Starport DB.")
 
     def shouldPipelineBeDeleted(pipelineStatus: Option[PipelineStatus]): Boolean = {
       val nst = for {
@@ -47,7 +39,7 @@ object CleanupUnmanagedPipelines extends StarportActivity {
 
     val pipelinesInAws =
       if (force) AwsDataPipeline.listPipelineIds()
-      else AwsDataPipeline.listPipelineIds() -- inConsoleStarportScheduledPipelineIds
+      else AwsDataPipeline.listPipelineIds() -- inConsoleManagedPipelineIds()
 
     val pipelineStatuses = AwsDataPipeline.describePipeline(pipelinesInAws.toSeq: _*)
     pipelinesInAws.filter { pId => shouldPipelineBeDeleted(pipelineStatuses.get(pId)) }
