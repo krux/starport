@@ -10,7 +10,7 @@ object SummarizeUnmanagedPipelines extends StarportActivity {
 
     logger.info("Unmanaged Pipeline Count By State:")
     pipelineStatuses.groupBy(_._2.pipelineState).mapValues(_.size).toSeq.sortBy(_._2)(Ordering[Int].reverse)
-      .foreach { case (state, count) => logger.info(s"$state -> $count") }
+      .foreach { case (state, count) => logger.info(s"${state.getOrElse("Unknown")} -> $count") }
   }
 
   def main(args: Array[String]): Unit = {
