@@ -7,7 +7,7 @@ import com.codahale.metrics.graphite.{Graphite, GraphiteReporter}
 import com.codahale.metrics.{ConsoleReporter, MetricFilter, MetricRegistry, ScheduledReporter}
 import io.github.azagniotov.metrics.reporter.cloudwatch.CloudWatchReporter
 import io.github.azagniotov.metrics.reporter.cloudwatch.CloudWatchReporter.Percentile
-import com.amazonaws.regions.{Region, Regions}
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.cloudwatch.model.StandardUnit
 import com.amazonaws.services.cloudwatch.{AmazonCloudWatchAsync, AmazonCloudWatchAsyncClientBuilder}
 import com.typesafe.config.Config
@@ -73,13 +73,30 @@ final case object CloudWatchReporterSettings extends MetricSettings {
 
   private case class CloudWatchReporterSettingsImpl(config: Config) extends MetricSettingsImpl {
 
-    val awsRegion: Region = Region.getRegion(Regions.US_WEST_2)
+    val awsRegion: Regions = Regions.fromName(config.getString("region"))
     val prefix = config.getString("prefix")
-    val environment = s"Environment=${prefix}"
+    val configGroup = config.getString("group")
+    val configModule = config.getString("module")
+
+    val environment = s"Environment=${prefix},"
+    val group = s"Group=${configGroup},"
+    val module = s"Module=${configModule}"
+    //val name = ???
+    //val stack = ???
+    //val terraform = ???
+
+    val dimensionsList = List[String](
+      environment,
+      group,
+      module
+    //  name,
+    //  stack,
+    //  terraform
+    ).reduceLeft(_++_)
 
     val awsCloudWatchAsync: AmazonCloudWatchAsync = AmazonCloudWatchAsyncClientBuilder
       .standard()
-      .withRegion(Regions.US_WEST_2)
+      .withRegion(awsRegion)
       .build()
 
     def getReporter(metricRegistry: MetricRegistry): CloudWatchReporter = CloudWatchReporter

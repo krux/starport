@@ -23,16 +23,12 @@ val awsLambdaCore          = "com.amazonaws"          %  "aws-lambda-java-core" 
 val cloudwatchMetrics      = "io.github.azagniotov"   %  "dropwizard-metrics-cloudwatch" % "1.0.13"
 
 lazy val commonSettings = Seq(
-  scalacOptions ++= Seq("-deprecation", "-feature", "-Xlint", "-Xfatal-warnings"),
+  scalacOptions ++= Seq("-deprecation", "-feature", "-Xlint"),
   scalaVersion := "2.12.8",
   libraryDependencies += scalaTestArtifact,
   organization := "com.krux",
   test in assembly := {},  // skip test during assembly
   publishMavenStyle := true
-  //assemblyMergeStrategy in assembly := {
-  //  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
-  //  case x => MergeStrategy.first
- // }
 )
 
 lazy val root = (project in file(".")).
