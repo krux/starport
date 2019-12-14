@@ -3,6 +3,7 @@ package com.krux.starport.metric
 import java.util.concurrent.TimeUnit
 
 import scala.util.Random
+import scala.collection.JavaConverters._
 import com.codahale.metrics.graphite.{Graphite, GraphiteReporter}
 import com.codahale.metrics.{ConsoleReporter, MetricFilter, MetricRegistry, ScheduledReporter}
 import io.github.azagniotov.metrics.reporter.cloudwatch.CloudWatchReporter
@@ -74,25 +75,12 @@ final case object CloudWatchReporterSettings extends MetricSettings {
   private case class CloudWatchReporterSettingsImpl(config: Config) extends MetricSettingsImpl {
 
     val awsRegion: Regions = Regions.fromName(config.getString("region"))
-    val prefix = config.getString("prefix")
-    val configGroup = config.getString("group")
-    val configModule = config.getString("module")
 
-    val environment = s"Environment=${prefix},"
-    val group = s"Group=${configGroup},"
-    val module = s"Module=${configModule}"
-    //val name = ???
-    //val stack = ???
-    //val terraform = ???
-
-    val dimensionsList = List[String](
-      environment,
-      group,
-      module
-    //  name,
-    //  stack,
-    //  terraform
-    ).reduceLeft(_++_)
+    val dimensions = config
+      .getObject("Dimensions")
+      .asScala
+      .map { case (k, v) => k + "=" + v.unwrapped.toString }
+      .toList
 
     val awsCloudWatchAsync: AmazonCloudWatchAsync = AmazonCloudWatchAsyncClientBuilder
       .standard()
@@ -100,7 +88,7 @@ final case object CloudWatchReporterSettings extends MetricSettings {
       .build()
 
     def getReporter(metricRegistry: MetricRegistry): CloudWatchReporter = CloudWatchReporter
-      .forRegistry(metricRegistry, awsCloudWatchAsync, "STARPORT")
+      .forRegistry(metricRegistry, awsCloudWatchAsync, "Starport")
       .convertRatesTo(TimeUnit.SECONDS).convertDurationsTo(TimeUnit.MILLISECONDS)
       .filter(MetricFilter.ALL)
       .withPercentiles(Percentile.P75, Percentile.P99)
@@ -115,7 +103,7 @@ final case object CloudWatchReporterSettings extends MetricSettings {
       .withReportRawCountValue()
       .withHighResolution()
       .withMeterUnitSentToCW(StandardUnit.Bytes)
-      .withGlobalDimensions(environment)
+      .withGlobalDimensions(dimensions: _*)
       .build()
 
   }
