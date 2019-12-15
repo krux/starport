@@ -7,7 +7,7 @@ import scala.collection.{Map => IMap}
 import scala.util.{Failure, Success, Try}
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
 import com.amazonaws.regions.Regions
-import com.krux.starport.metric.{CloudWatchReporterSettings, GraphiteReporterSettings, MetricSettings}
+import com.krux.starport.metric.{CloudWatchReporterSettings, DefaultConsoleReporterSettings, GraphiteReporterSettings, MetricSettings}
 import com.krux.starport.net.StarportURLStreamHandlerFactory
 
 class StarportSettings(val config: Config) extends Serializable {
@@ -24,12 +24,13 @@ class StarportSettings(val config: Config) extends Serializable {
         case s if (s == "graphite") => GraphiteReporterSettings
         case s if (s == "cloudwatch") => CloudWatchReporterSettings
       }
-      case Failure(_) => throw new InstantiationException("No metrics engine specified.")
+      case Failure(_) => DefaultConsoleReporterSettings
     }
 
   val metricConfig: Option[Config] = metricsEngine match {
       case GraphiteReporterSettings => Try(config.getConfig("krux.starport.metric.graphite")).toOption
       case CloudWatchReporterSettings => Try(config.getConfig("krux.starport.metric.cloudwatch")).toOption
+      case DefaultConsoleReporterSettings => None
    }
 
   val jdbc: JdbcConfig = JdbcConfig(config.getConfig("krux.starport.jdbc"))

@@ -31,15 +31,29 @@ sealed trait MetricSettings {
   /** Set the default duration to be in seconds */
   final val DefaultDuration = TimeUnit.SECONDS
 
-  def getReporter(config: Config, registry: MetricRegistry): ScheduledReporter = this match {
-      case GraphiteReporterSettings => GraphiteReporterSettings(config).getReporter(registry)
-      case CloudWatchReporterSettings => CloudWatchReporterSettings(config).getReporter(registry)
+  def getReporter(config: Option[Config], registry: MetricRegistry): ScheduledReporter = config match {
+    case Some(conf) => this match {
+      case GraphiteReporterSettings => GraphiteReporterSettings(conf).getReporter(registry)
+      case CloudWatchReporterSettings => CloudWatchReporterSettings(conf).getReporter(registry)
+      case DefaultConsoleReporterSettings => DefaultConsoleReporterSettings().getReporter(registry)
+    }
+    case None => DefaultConsoleReporterSettings().getReporter(registry)
   }
 
-  def getDefaultReporter(registry: MetricRegistry): ScheduledReporter = ConsoleReporter
-    .forRegistry(registry)
-    .convertDurationsTo(DefaultDuration)
-    .build()
+}
+
+final case object DefaultConsoleReporterSettings extends MetricSettings {
+
+  def apply(): MetricSettingsImpl = new DefaultConsoleReporterSettingsImpl
+
+  private class DefaultConsoleReporterSettingsImpl extends MetricSettingsImpl {
+
+    def getReporter(registry: MetricRegistry): ScheduledReporter = ConsoleReporter
+      .forRegistry(registry)
+      .convertDurationsTo(DefaultDuration)
+      .build()
+
+  }
 
 }
 

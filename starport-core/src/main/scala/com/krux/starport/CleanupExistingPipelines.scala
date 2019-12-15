@@ -156,10 +156,7 @@ object CleanupExistingPipelines extends StarportActivity {
 
   def main(args: Array[String]): Unit = {
 
-    val reporter = conf.metricConfig match {
-      case Some(config) => reportingEngine.getReporter(config, metrics)
-      case None => reportingEngine.getDefaultReporter(metrics)
-    }
+    val reporter = reportingEngine.getReporter(conf.metricConfig, metrics)
 
     val start = System.nanoTime
     try {
