@@ -4,13 +4,11 @@ import java.net.URL
 
 import scala.collection.JavaConverters._
 import scala.collection.{Map => IMap}
-import scala.util.Try
-
+import scala.util.{Failure, Success, Try}
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
 import com.amazonaws.regions.Regions
-
+import com.krux.starport.metric.{CloudWatchReporterSettings, DefaultConsoleReporterSettings, GraphiteReporterSettings, MetricSettings}
 import com.krux.starport.net.StarportURLStreamHandlerFactory
-
 
 class StarportSettings(val config: Config) extends Serializable {
 
@@ -20,8 +18,20 @@ class StarportSettings(val config: Config) extends Serializable {
 
   val starportNotificationSns = config.getString("krux.starport.notification.sns")
 
-  val metricSettings: Option[Config] =
-    Try(config.getConfig("krux.starport.metric.graphite")).toOption
+  val metricsEngine: MetricSettings =
+    Try(config.getString("krux.starport.metric.engine")) match {
+      case Success(engine) => engine match {
+        case s if (s == "graphite") => GraphiteReporterSettings
+        case s if (s == "cloudwatch") => CloudWatchReporterSettings
+      }
+      case Failure(_) => DefaultConsoleReporterSettings
+    }
+
+  val metricConfig: Option[Config] = metricsEngine match {
+      case GraphiteReporterSettings => Try(config.getConfig("krux.starport.metric.graphite")).toOption
+      case CloudWatchReporterSettings => Try(config.getConfig("krux.starport.metric.cloudwatch")).toOption
+      case DefaultConsoleReporterSettings => None
+   }
 
   val jdbc: JdbcConfig = JdbcConfig(config.getConfig("krux.starport.jdbc"))
 

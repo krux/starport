@@ -5,23 +5,22 @@ import java.util.concurrent.{ForkJoinPool, TimeUnit}
 import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.sys.process._
-
-import com.codahale.metrics.MetricRegistry
+import com.codahale.metrics.{Counter, MetricRegistry}
 import com.github.nscala_time.time.Imports._
 import slick.jdbc.PostgresProfile.api._
-
-import com.krux.hyperion.client.{AwsClientForName, AwsClient}
+import com.krux.hyperion.client.{AwsClient, AwsClientForName}
 import com.krux.hyperion.expression.{Duration => HDuration}
-import com.krux.starport.cli.{SchedulerOptions, SchedulerOptionParser}
+import com.krux.starport.cli.{SchedulerOptionParser, SchedulerOptions}
 import com.krux.starport.db.record.{Pipeline, ScheduledPipeline, SchedulerMetric}
-import com.krux.starport.db.table.{ScheduledPipelines, Pipelines, SchedulerMetrics, ScheduleFailureCounters}
-import com.krux.starport.metric.{ConstantValueGauge, SimpleTimerGauge, MetricSettings}
-import com.krux.starport.util.{S3FileHandler, ErrorHandler}
-
+import com.krux.starport.db.table.{Pipelines, ScheduleFailureCounters, ScheduledPipelines, SchedulerMetrics}
+import com.krux.starport.metric.{ConstantValueGauge, MetricSettings, SimpleTimerGauge}
+import com.krux.starport.util.{ErrorHandler, S3FileHandler}
 
 object StartScheduledPipelines extends StarportActivity {
 
   val metrics = new MetricRegistry()
+
+  lazy val reportingEngine: MetricSettings = conf.metricsEngine
 
   val scheduleTimer = metrics.timer("timers.pipeline_scheduling_time")
 
@@ -219,6 +218,9 @@ object StartScheduledPipelines extends StarportActivity {
         new ForkJoinPool(parallel * Runtime.getRuntime.availableProcessors)
       )
 
+    val successfulPipelines = metrics.register("counter.successful-pipeline-deployment-count", new Counter())
+    val failedPipelines = metrics.register("counter.failed-pipeline-deployment-count", new Counter())
+
     parPipelineModels.foreach { p =>
 
       val timerInst = scheduleTimer.time()
@@ -235,11 +237,13 @@ object StartScheduledPipelines extends StarportActivity {
         logger.info(
           s"deployed pipeline ${p.name} in ${TimeUnit.SECONDS.convert(timerInst.stop(), TimeUnit.NANOSECONDS)}"
         )
+        successfulPipelines.inc()
       } else {  // otherwise handle the failure and send notification
         ErrorHandler.pipelineScheduleFailed(p, output)
         logger.warn(
           s"failed to deploy pipeline ${p.name} in ${TimeUnit.SECONDS.convert(timerInst.stop(), TimeUnit.NANOSECONDS)}"
         )
+        failedPipelines.inc()
       }
 
     }
@@ -263,7 +267,7 @@ object StartScheduledPipelines extends StarportActivity {
     val mainTimer = new SimpleTimerGauge(TimeUnit.MINUTES)
     metrics.register("gauges.runtime", mainTimer)
 
-    val reporter = MetricSettings.getReporter(conf.metricSettings, metrics)
+    val reporter = reportingEngine.getReporter(conf.metricConfig, metrics)
 
     try {
       SchedulerOptionParser.parse(args) match {
