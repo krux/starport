@@ -280,6 +280,7 @@ object StartScheduledPipelines extends StarportActivity {
     } finally {
       mainTimer.stop()
       reporter.report()
+      reporter.close()
     }
   }
 

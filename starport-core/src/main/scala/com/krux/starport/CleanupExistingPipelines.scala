@@ -171,6 +171,7 @@ object CleanupExistingPipelines extends StarportActivity {
       )
     } finally {
       reporter.report()
+      reporter.close()
     }
   }
 
