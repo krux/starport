@@ -27,14 +27,9 @@ class StarportSettings(val config: Config) extends Serializable {
     Try(config.getString("krux.starport.metric.engine"))
       .toOption
       .flatMap {
-        case "graphite" =>
-          Try(config.getConfig("krux.starport.metric.graphite")).toOption
-              .map(GraphiteReporterSettings)
-        case "cloudwatch" =>
-          Try(config.getConfig("krux.starport.metric.cloudwatch")).toOption
-            .map(CloudWatchReporterSettings)
-        case _ =>
-          None
+        case "graphite" => graphiteSettings
+        case "cloudwatch" => cloudWatchSettings
+        case _ => None
       }
       .getOrElse(DefaultConsoleReporterSettings)
 
