@@ -5,10 +5,13 @@ import java.net.URL
 import scala.collection.JavaConverters._
 import scala.collection.{Map => IMap}
 import scala.util.Try
-import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
+
 import com.amazonaws.regions.Regions
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
+
 import com.krux.starport.metric.{CloudWatchReporterSettings, DefaultConsoleReporterSettings, GraphiteReporterSettings, MetricSettings}
 import com.krux.starport.net.StarportURLStreamHandlerFactory
+
 
 class StarportSettings(val config: Config) extends Serializable {
 
