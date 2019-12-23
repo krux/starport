@@ -4,11 +4,14 @@ import java.net.URL
 
 import scala.collection.JavaConverters._
 import scala.collection.{Map => IMap}
-import scala.util.{Failure, Success, Try}
-import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
+import scala.util.Try
+
 import com.amazonaws.regions.Regions
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
+
 import com.krux.starport.metric.{CloudWatchReporterSettings, DefaultConsoleReporterSettings, GraphiteReporterSettings, MetricSettings}
 import com.krux.starport.net.StarportURLStreamHandlerFactory
+
 
 class StarportSettings(val config: Config) extends Serializable {
 
@@ -18,20 +21,20 @@ class StarportSettings(val config: Config) extends Serializable {
 
   val starportNotificationSns = config.getString("krux.starport.notification.sns")
 
-  val metricsEngine: MetricSettings =
-    Try(config.getString("krux.starport.metric.engine")) match {
-      case Success(engine) => engine match {
-        case s if (s == "graphite") => GraphiteReporterSettings
-        case s if (s == "cloudwatch") => CloudWatchReporterSettings
-      }
-      case Failure(_) => DefaultConsoleReporterSettings
-    }
+  val graphiteSettings = Try(config.getConfig("krux.starport.metric.graphite")).toOption
+    .map(GraphiteReporterSettings.apply)
+  val cloudWatchSettings = Try(config.getConfig("krux.starport.metric.cloudwatch")).toOption
+    .map(CloudWatchReporterSettings.apply)
 
-  val metricConfig: Option[Config] = metricsEngine match {
-      case GraphiteReporterSettings => Try(config.getConfig("krux.starport.metric.graphite")).toOption
-      case CloudWatchReporterSettings => Try(config.getConfig("krux.starport.metric.cloudwatch")).toOption
-      case DefaultConsoleReporterSettings => None
-   }
+  val metricsEngine: MetricSettings =
+    Try(config.getString("krux.starport.metric.engine"))
+      .toOption
+      .flatMap {
+        case "graphite" => graphiteSettings
+        case "cloudwatch" => cloudWatchSettings
+        case _ => None
+      }
+      .getOrElse(DefaultConsoleReporterSettings)
 
   val jdbc: JdbcConfig = JdbcConfig(config.getConfig("krux.starport.jdbc"))
 
