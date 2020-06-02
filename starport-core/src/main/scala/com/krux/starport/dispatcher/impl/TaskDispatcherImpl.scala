@@ -20,10 +20,10 @@ import com.krux.starport.exception.StarportException
 
 class TaskDispatcherImpl extends TaskDispatcher with DateTimeFunctions with Logging {
 
-  override def dispatch(p: Pipeline, options: SchedulerOptions, jar: String, conf: StarportSettings) = {
+  override def dispatch(pipeline: Pipeline, options: SchedulerOptions, jar: String, conf: StarportSettings) = {
     val result = for {
-      pipelineName <- deployPipeline(p, options.scheduledStart, options.scheduledEnd, jar, conf)
-      scheduledPipelines <- activatePipeline(p, pipelineName, options, conf)
+      pipelineName <- deployPipeline(pipeline, options.scheduledStart, options.scheduledEnd, jar, conf)
+      scheduledPipelines <- activatePipeline(pipeline, pipelineName, options, conf)
     } yield {
       scheduledPipelines
     }

@@ -38,7 +38,7 @@ class StarportSettings(val config: Config) extends Serializable {
 
   val jdbc: JdbcConfig = JdbcConfig(config.getConfig("krux.starport.jdbc"))
 
-  val dispatcherType: String =  config.getString("krux.starport.dispatcher.type")
+  val dispatcherType: String =  if (config.hasPath("krux.starport.dispatcher.type")) config.getString("krux.starport.dispatcher.type") else "default"
 
   val parallel: Int = config.getInt("krux.starport.parallel")
 
