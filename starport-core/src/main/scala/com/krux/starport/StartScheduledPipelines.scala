@@ -4,15 +4,15 @@ import java.util.concurrent.{ForkJoinPool, TimeUnit}
 
 import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.sys.process._
 import com.codahale.metrics.{Counter, MetricRegistry}
 import com.github.nscala_time.time.Imports._
 import slick.jdbc.PostgresProfile.api._
-import com.krux.hyperion.client.{AwsClient, AwsClientForName}
 import com.krux.hyperion.expression.{Duration => HDuration}
 import com.krux.starport.cli.{SchedulerOptionParser, SchedulerOptions}
 import com.krux.starport.db.record.{Pipeline, ScheduledPipeline, SchedulerMetric}
 import com.krux.starport.db.table.{Pipelines, ScheduleFailureCounters, ScheduledPipelines, SchedulerMetrics}
+import com.krux.starport.dispatcher.TaskDispatcher
+import com.krux.starport.dispatcher.impl.TaskDispatcherImpl
 import com.krux.starport.metric.{ConstantValueGauge, MetricSettings, SimpleTimerGauge}
 import com.krux.starport.util.{ErrorHandler, S3FileHandler}
 
@@ -58,137 +58,43 @@ object StartScheduledPipelines extends StarportActivity {
     result
   }
 
-  /**
-   * @return status, the output, and the deployed pipeline name
-   */
-  def deployPipeline(
-      pipelineRecord: Pipeline,
-      currentTime: DateTime,
-      currentEndTime: DateTime,
-      localJar: String
-    ): (Int, String, String) = {
-
-    // TODO probably better to just use a different logger
-    val logPrefix = s"|PipelineId: ${pipelineRecord.id}|"
-
-    logger.info(s"$logPrefix Deploying pipeline: ${pipelineRecord.name}")
-
-    val start = pipelineRecord.nextRunTime.get
-    val until = pipelineRecord.end
-      .map(DateTimeOrdering.min(currentEndTime, _))
-      .getOrElse(currentEndTime)
-    val pipelinePeriod = pipelineRecord.period
-
-    // Note that aws datapieline have a weird requirement for endTime (documented as it has to be
-    // greater than startTime, but actually it has to be greater than startTime + period), it's
-    // very confusing, we here change it to number of times the pipeline should run to avoid this
-    // confusion.
-    val calculatedTimes =
-      if (pipelineRecord.backfill) timesTillEnd(start, until, HDuration(pipelinePeriod))
-      else 1
-
-    logger.info(s"$logPrefix calculatedTimes: $calculatedTimes")
-    if (calculatedTimes < 1) {
-      // the calculatedTimes should never be < 1
-      logger.error(s"calculatedTimes < 1")
-    }
-    val times = Math.max(1, calculatedTimes)
-
-    val actualStart = DateTime.now.withZone(DateTimeZone.UTC).toString(DateTimeFormat)
-
-    val pipelineClass = pipelineRecord.`class`
-    val pipelineName = s"${conf.pipelinePrefix}${actualStart}_${pipelineRecord.id.getOrElse(0)}_${pipelineClass}"
-
-    // create the pipeline through cli but do not activiate it
-    val command = Seq(
-      "java",
-      "-cp",
-      localJar,
-      pipelineClass,
-      "create",
-      "--no-check",
-      "--start", start.toString(DateTimeFormat),
-      "--times", times.toString,
-      "--every", pipelinePeriod,
-      "--name", pipelineName
-    ) ++ conf.region.toSeq.flatMap(r => Seq("--region", r.getName))
-
-    val process = Process(
-      command,
-      None,
-      extraEnvs: _*
-    )
-
-    logger.info(s"$logPrefix Executing `${command.mkString(" ")}`")
-
-    val outputBuilder = new StringBuilder
-    val status = process ! ProcessLogger(line => outputBuilder.append(line + "\n"))
-
-    (status, outputBuilder.toString, pipelineName)
-
+  private def updateScheduledPipelines(scheduledPipelines: Seq[ScheduledPipeline]) = {
+    val insertAction = DBIO.seq(ScheduledPipelines() ++= scheduledPipelines)
+    db.run(insertAction).waitForResult
   }
 
-  def activatePipeline(
-      pipelineRecord: Pipeline,
-      pipelineName: String,
-      scheduledStart: DateTime,
-      actualStart: DateTime,
-      scheduledEnd: DateTime
-    ) = {
+  private def updateNextRunTime(pipelineRecord: Pipeline, options: SchedulerOptions) = {
+    // update the next runtime in the database
+    val newNextRunTime = nextRunTime(pipelineRecord.nextRunTime.get, HDuration(pipelineRecord.period), options.scheduledEnd)
+    val updateQuery = Pipelines().filter(_.id === pipelineRecord.id).map(_.nextRunTime)
+    logger.debug(s"Update with query ${updateQuery.updateStatement}")
+    val updateAction = updateQuery.update(Some(newNextRunTime))
+    db.run(updateAction).waitForResult
+  }
 
-    // TODO probably better to just use a different logger
-    val logPrefix = s"|PipelineId: ${pipelineRecord.id}|"
 
-    logger.info(s"$logPrefix Activating pipeline: $pipelineName...")
+  private def processPipeline(dispatcher: TaskDispatcher, pipeline: Pipeline, options: SchedulerOptions, jar: String, dispatchedPipelines: Counter, failedPipelines: Counter): Unit = {
+    val timerInst = scheduleTimer.time()
+    logger.info(s"Dispatching pipleine ${pipeline.name}")
 
-    val awsClientForName = AwsClientForName(AwsClient.getClient(), pipelineName, conf.maxRetry)
-    val pipelineIdNameMap = awsClientForName.pipelineIdNames
+    dispatcher.dispatch(pipeline, options, jar, conf) match {
+      case Left(ex) =>
+        ErrorHandler.pipelineScheduleFailed(pipeline, ex.getMessage())
+        logger.warn(
+          s"failed to deploy pipeline ${pipeline.name} in ${TimeUnit.SECONDS.convert(timerInst.stop(), TimeUnit.NANOSECONDS)}"
+        )
+        failedPipelines.inc()
+      case Right(r) =>
+        logger.info(
+          s"dispatched pipeline ${pipeline.name} in ${TimeUnit.SECONDS.convert(timerInst.stop(), TimeUnit.NANOSECONDS)}"
+        )
+        dispatchedPipelines.inc()
+        // activation successful - delete the failure counter
+        db.run(ScheduleFailureCounters().filter(_.pipelineId === pipeline.id.get).delete).waitForResult
+    }
 
-    awsClientForName
-      .forId() match {
-        case Some(client) =>
-          val activationStatus = if (client.activatePipelines().nonEmpty) {
-            "success"
-          } else {
-            logger.error(s"$logPrefix Failed to activate pipeline ${client.pipelineIds}")
-            "fail"
-          }
-
-          logger.info(s"$logPrefix Register pipelines (${client.pipelineIds}) in database.")
-
-          val scheduledPipelineRecords = client.pipelineIds.map(awsId =>
-            ScheduledPipeline(
-              awsId,
-              pipelineRecord.id.get,
-              pipelineIdNameMap(awsId),
-              scheduledStart,
-              actualStart,
-              DateTime.now,
-              activationStatus,
-              true
-            )
-          )
-
-          val insertAction = DBIO.seq(ScheduledPipelines() ++= scheduledPipelineRecords)
-          db.run(insertAction).waitForResult
-
-          logger.info(s"$logPrefix updating the next run time")
-
-          // update the next runtime in the database
-          val newNextRunTime = nextRunTime(pipelineRecord.nextRunTime.get, HDuration(pipelineRecord.period), scheduledEnd)
-          val updateQuery = Pipelines().filter(_.id === pipelineRecord.id).map(_.nextRunTime)
-          logger.debug(s"$logPrefix Update with query ${updateQuery.updateStatement}")
-          val updateAction = updateQuery.update(Some(newNextRunTime))
-          db.run(updateAction).waitForResult
-
-          // activate successful, reset the failure counter, by deleting it
-          db.run(ScheduleFailureCounters().filter(_.pipelineId === pipelineRecord.id.get).delete).waitForResult
-
-          logger.info(s"$logPrefix Successfully scheduled pipeline $pipelineName")
-        case None =>
-          val errorMessage = s"pipeline with name $pipelineName not found"
-          ErrorHandler.pipelineScheduleFailed(pipelineRecord, errorMessage)
-      }
+    // update the next run time for this pipeline
+    updateNextRunTime(pipeline, options)
   }
 
   def run(options: SchedulerOptions): Unit = {
@@ -208,7 +114,8 @@ object StartScheduledPipelines extends StarportActivity {
       .waitForResult
     metrics.register("gauges.pipeline_count", new ConstantValueGauge(pipelineModels.size))
 
-    val localJars = getLocalJars(pipelineModels)
+    // TODO: this variable can be moved to the implementation
+    lazy val localJars = getLocalJars(pipelineModels)
 
     // execute all jars
     val parPipelineModels = pipelineModels.par
@@ -218,35 +125,22 @@ object StartScheduledPipelines extends StarportActivity {
         new ForkJoinPool(parallel * Runtime.getRuntime.availableProcessors)
       )
 
+    val taskDispatcher: TaskDispatcher = conf.dispatcherType match {
+      case "default" => new TaskDispatcherImpl()
+      case x => throw new NotImplementedError(s"there is no task dispatcher implementation for $x")
+    }
+
+    // in case of default taskDispatcher: the dispatchedPipelines and succesfulPipelines metrics should be exactly same.
+    val dispatchedPipelines = metrics.register("counter.successful-pipeline-dispatch-count", new Counter())
     val successfulPipelines = metrics.register("counter.successful-pipeline-deployment-count", new Counter())
     val failedPipelines = metrics.register("counter.failed-pipeline-deployment-count", new Counter())
 
-    parPipelineModels.foreach { p =>
+    parPipelineModels.foreach(p => processPipeline(taskDispatcher, p, options, localJars(p.jar), dispatchedPipelines, failedPipelines))
 
-      val timerInst = scheduleTimer.time()
-
-      logger.info(s"deploying pipleine ${p.name}")
-
-      val (status, output, pipelineName) = deployPipeline(
-        p, options.scheduledStart, options.scheduledEnd, localJars(p.jar))
-
-      Console.err.print(output)
-
-      if (status == 0) {  // deploy successfully, perform activation
-        activatePipeline(p, pipelineName, options.scheduledStart, options.actualStart, options.scheduledEnd)
-        logger.info(
-          s"deployed pipeline ${p.name} in ${TimeUnit.SECONDS.convert(timerInst.stop(), TimeUnit.NANOSECONDS)}"
-        )
-        successfulPipelines.inc()
-      } else {  // otherwise handle the failure and send notification
-        ErrorHandler.pipelineScheduleFailed(p, output)
-        logger.warn(
-          s"failed to deploy pipeline ${p.name} in ${TimeUnit.SECONDS.convert(timerInst.stop(), TimeUnit.NANOSECONDS)}"
-        )
-        failedPipelines.inc()
-      }
-
-    }
+    // retrieve the scheduled pipelines and save the information in the db
+    val scheduledPipelines = taskDispatcher.retrieve(conf)
+    successfulPipelines.inc(scheduledPipelines.length)
+    updateScheduledPipelines(scheduledPipelines)
 
     db.run(DBIO.seq(
         SchedulerMetrics()
@@ -255,7 +149,6 @@ object StartScheduledPipelines extends StarportActivity {
           .update(Option(DateTime.now))
       ))
       .waitForResult
-
   }
 
   /**

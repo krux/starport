@@ -24,7 +24,7 @@ val cloudwatchMetrics      = "io.github.azagniotov"   %  "dropwizard-metrics-clo
 
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation", "-feature", "-Xlint", "-Xfatal-warnings"),
-  scalaVersion := "2.12.8",
+  scalaVersion := "2.12.10",
   libraryDependencies += scalaTestArtifact,
   organization := "com.krux",
   test in assembly := {},  // skip test during assembly

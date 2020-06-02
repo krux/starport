@@ -38,6 +38,8 @@ class StarportSettings(val config: Config) extends Serializable {
 
   val jdbc: JdbcConfig = JdbcConfig(config.getConfig("krux.starport.jdbc"))
 
+  val dispatcherType: String =  config.getString("krux.starport.dispatcher.type")
+
   val parallel: Int = config.getInt("krux.starport.parallel")
 
   val maxRetry: Int = config.getInt("hyperion.aws.client.max_retry")
