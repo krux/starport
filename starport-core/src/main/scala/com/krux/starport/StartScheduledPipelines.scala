@@ -104,6 +104,18 @@ object StartScheduledPipelines extends StarportActivity {
     val actualStart = options.actualStart
     db.run(DBIO.seq(SchedulerMetrics() += SchedulerMetric(actualStart))).waitForResult
 
+    // in case of default taskDispatcher: the dispatchedPipelines and succesfulPipelines metrics should be exactly same.
+    val dispatchedPipelines = metrics.register("counter.successful-pipeline-dispatch-count", new Counter())
+    val successfulPipelines = metrics.register("counter.successful-pipeline-deployment-count", new Counter())
+    val failedPipelines = metrics.register("counter.failed-pipeline-deployment-count", new Counter())
+
+    val taskDispatcher: TaskDispatcher = conf.dispatcherType match {
+      case "default" => new TaskDispatcherImpl()
+      case x =>
+        // pipelines scheduled in a previous run should be fetched here if the dispatcher is remote
+        throw new NotImplementedError(s"there is no task dispatcher implementation for $x")
+    }
+
     val pipelineModels = pendingPipelineRecords(options.scheduledEnd)
     db.run(DBIO.seq(
         SchedulerMetrics()
@@ -124,16 +136,6 @@ object StartScheduledPipelines extends StarportActivity {
       parPipelineModels.tasksupport = new ForkJoinTaskSupport(
         new ForkJoinPool(parallel * Runtime.getRuntime.availableProcessors)
       )
-
-    val taskDispatcher: TaskDispatcher = conf.dispatcherType match {
-      case "default" => new TaskDispatcherImpl()
-      case x => throw new NotImplementedError(s"there is no task dispatcher implementation for $x")
-    }
-
-    // in case of default taskDispatcher: the dispatchedPipelines and succesfulPipelines metrics should be exactly same.
-    val dispatchedPipelines = metrics.register("counter.successful-pipeline-dispatch-count", new Counter())
-    val successfulPipelines = metrics.register("counter.successful-pipeline-deployment-count", new Counter())
-    val failedPipelines = metrics.register("counter.failed-pipeline-deployment-count", new Counter())
 
     parPipelineModels.foreach(p => processPipeline(taskDispatcher, p, options, localJars(p.jar), dispatchedPipelines, failedPipelines))
 
