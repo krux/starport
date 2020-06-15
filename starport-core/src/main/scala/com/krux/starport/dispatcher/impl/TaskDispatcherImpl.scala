@@ -1,14 +1,15 @@
 package com.krux.starport.dispatcher.impl
 
+import java.util.concurrent.ConcurrentLinkedQueue
+
 import scala.sys.process.{Process, ProcessLogger}
 import scala.util.{Either, Left, Right}
-import scala.collection.mutable.Queue
 
 import com.github.nscala_time.time.Imports._
 
 import com.krux.hyperion.client.{AwsClient, AwsClientForName}
 import com.krux.hyperion.expression.{Duration => HDuration}
-
+import com.krux.starport.dispatcher.impl.ConcurrentQueueHelpers._
 import com.krux.starport.db.record.ScheduledPipeline
 import com.krux.starport.util.DateTimeFunctions
 import com.krux.starport.config.StarportSettings
@@ -30,14 +31,16 @@ class TaskDispatcherImpl extends TaskDispatcher with DateTimeFunctions with Logg
 
     // keep the scheduled pipelines in a queue and return Either[Exception, Boolean]
     result map { (scheduledPipelines) =>
-        activatedPipelines.enqueue(scheduledPipelines: _*)
-        true
+      scheduledPipelines.foreach(activatedPipelines.add(_))
+      ()
     }
   }
 
-  override def retrieve(conf: StarportSettings) = activatedPipelines.dequeueAll(_ => true)
+  override def retrieve(conf: StarportSettings) = {
+    activatedPipelines.retrieveAll()
+  }
 
-  private val activatedPipelines = Queue[ScheduledPipeline]()
+  private val activatedPipelines =  new ConcurrentLinkedQueue[ScheduledPipeline]()
 
   private def activatePipeline(
       pipelineRecord: Pipeline,
