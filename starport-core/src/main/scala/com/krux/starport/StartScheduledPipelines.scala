@@ -59,8 +59,12 @@ object StartScheduledPipelines extends StarportActivity {
   }
 
   private def updateScheduledPipelines(scheduledPipelines: Seq[ScheduledPipeline]) = {
-    val insertAction = DBIO.seq(ScheduledPipelines() ++= scheduledPipelines)
-    db.run(insertAction).waitForResult
+    scheduledPipelines.isEmpty match {
+      case true => ()
+      case false =>
+        val insertAction = DBIO.seq(ScheduledPipelines() ++= scheduledPipelines)
+        db.run(insertAction).waitForResult
+    }
   }
 
   private def updateNextRunTime(pipelineRecord: Pipeline, options: SchedulerOptions) = {
@@ -115,6 +119,12 @@ object StartScheduledPipelines extends StarportActivity {
         // pipelines scheduled in a previous run should be fetched here if the dispatcher is remote
         throw new NotImplementedError(s"there is no task dispatcher implementation for $x")
     }
+
+    // fetch the pipelines which may have been scheduled in a previous runs but are not present in the database yet
+    // this operation is a no-op in case of a local dispatcher like the TaskDispatcherImpl
+    val previouslyScheduledPipelines = taskDispatcher.retrieve(conf)
+    successfulPipelines.inc(previouslyScheduledPipelines.length)
+    updateScheduledPipelines(previouslyScheduledPipelines)
 
     val pipelineModels = pendingPipelineRecords(options.scheduledEnd)
     db.run(DBIO.seq(
