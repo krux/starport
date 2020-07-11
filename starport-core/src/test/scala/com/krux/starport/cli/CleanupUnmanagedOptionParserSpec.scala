@@ -1,12 +1,14 @@
 package com.krux.starport.cli
 
-import org.joda.time.DateTime
-import org.scalatest.WordSpec
+import java.time.LocalDateTime
+
+import org.scalatest.wordspec.AnyWordSpec
 
 import com.krux.starport.util.PipelineState
+import com.krux.starport.util.DateTimeFunctions
 
 
-class CleanupUnmanagedOptionParserSpec extends WordSpec {
+class CleanupUnmanagedOptionParserSpec extends AnyWordSpec {
   "CleanupUnmanagedOptionParser" when {
     "args is empty" should {
       val args = Array.empty[String]
@@ -24,10 +26,10 @@ class CleanupUnmanagedOptionParserSpec extends WordSpec {
       "return 2 months ago as default cutoffDate" in {
         val options = CleanupUnmanagedOptionParser.parse(args).get
         val cutoffDate = options.cutoffDate
-        val expectedDate = DateTime.now.minusMonths(2)
+        val expectedDate = DateTimeFunctions.currentTimeUTC.toLocalDateTime.minusMonths(2)
 
         assert(cutoffDate.getDayOfMonth() === expectedDate.getDayOfMonth())
-        assert(cutoffDate.getMonthOfYear() === expectedDate.getMonthOfYear())
+        assert(cutoffDate.getMonth() === expectedDate.getMonth())
         assert(cutoffDate.getYear() === expectedDate.getYear())
       }
 
@@ -60,10 +62,10 @@ class CleanupUnmanagedOptionParserSpec extends WordSpec {
       "parse cutoffDate" in {
         val options = CleanupUnmanagedOptionParser.parse(args).get
         val cutoffDate = options.cutoffDate
-        val expectedDate = new DateTime("2017-06-30T00:00:00Z")
+        val expectedDate = LocalDateTime.of(2017, 6, 30, 0, 0, 0)
 
         assert(cutoffDate.getDayOfMonth() === expectedDate.getDayOfMonth())
-        assert(cutoffDate.getMonthOfYear() === expectedDate.getMonthOfYear())
+        assert(cutoffDate.getMonth() === expectedDate.getMonth())
         assert(cutoffDate.getYear() === expectedDate.getYear())
       }
 
