@@ -1,7 +1,9 @@
 package com.krux.starport.dispatcher.impl
 
 import java.util.concurrent.ConcurrentLinkedQueue
-import collection.JavaConverters._
+
+import scala.collection.JavaConverters._
+
 import com.krux.starport.db.record.ScheduledPipeline
 
 /**

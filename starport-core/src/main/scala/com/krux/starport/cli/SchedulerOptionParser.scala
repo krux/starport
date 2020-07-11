@@ -1,6 +1,7 @@
 package com.krux.starport.cli
 
-import org.joda.time.DateTime
+import java.time.LocalDateTime
+
 import scopt.OptionParser
 
 object SchedulerOptionParser extends Reads {
@@ -12,13 +13,13 @@ object SchedulerOptionParser extends Reads {
     head(programName)
     help("help").text("prints this usage text")
 
-    opt[DateTime]("start").valueName("<scheduledStart>")
+    opt[LocalDateTime]("start").valueName("<scheduledStart>")
       .action((x, c) => c.copy(scheduledStart = x))
 
-    opt[DateTime]("end").valueName("<scheduledEnd>")
+    opt[LocalDateTime]("end").valueName("<scheduledEnd>")
       .action((x, c) => c.copy(scheduledEnd = x))
 
-    opt[DateTime]("actual-start").valueName("<actualStart>")
+    opt[LocalDateTime]("actual-start").valueName("<actualStart>")
       .action((x, c) => c.copy(actualStart = x))
 
   }

@@ -1,15 +1,13 @@
 package com.krux.starport.db.table
 
-import org.joda.time.DateTime
+import java.time.LocalDateTime
+
 import slick.jdbc.PostgresProfile.api._
 
-import com.krux.starport.db.DateTimeMapped
 import com.krux.starport.db.record.ScheduledPipeline
 
 
-class ScheduledPipelines(tag: Tag)
-  extends Table[ScheduledPipeline](tag, "scheduled_pipelines")
-  with DateTimeMapped {
+class ScheduledPipelines(tag: Tag) extends Table[ScheduledPipeline](tag, "scheduled_pipelines") {
 
   /**
    * The pipeline id that are returned from aws
@@ -29,17 +27,17 @@ class ScheduledPipelines(tag: Tag)
   /**
    * The scheduled start time of the scheduler
    */
-  def scheduledStart = column[DateTime]("scheduled_start")
+  def scheduledStart = column[LocalDateTime]("scheduled_start")
 
   /**
    * The actual start time of the scheduler
    */
-  def actualStart = column[DateTime]("actual_start")
+  def actualStart = column[LocalDateTime]("actual_start")
 
   /**
    * When the pipeline is deployed
    */
-  def deployedTime = column[DateTime]("deployed_time")
+  def deployedTime = column[LocalDateTime]("deployed_time")
 
   /**
    * The status that are returned by aws

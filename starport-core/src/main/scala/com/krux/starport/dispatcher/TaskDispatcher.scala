@@ -1,10 +1,10 @@
 package com.krux.starport.dispatcher
 
 import com.krux.starport.cli.SchedulerOptions
-import com.krux.starport.db.record.{Pipeline, ScheduledPipeline}
-import com.krux.starport.exception.StarportException
 import com.krux.starport.config.StarportSettings
 import com.krux.starport.db.record.ScheduledPipeline
+import com.krux.starport.db.record.{Pipeline, ScheduledPipeline}
+import com.krux.starport.exception.StarportException
 
 trait TaskDispatcher {
 
@@ -17,7 +17,12 @@ trait TaskDispatcher {
    * @param conf
    * @return Unit - This is a side effect function
    */
-  def dispatch(pipeline: Pipeline, options: SchedulerOptions, jar: String, conf: StarportSettings): Either[StarportException, Unit]
+  def dispatch(
+    pipeline: Pipeline,
+    options: SchedulerOptions,
+    jar: String,
+    conf: StarportSettings
+  ): Either[StarportException, Unit]
 
   /**
    * This method retrieves all the pipeline Ids for the the pipelines deployed via dispatch.

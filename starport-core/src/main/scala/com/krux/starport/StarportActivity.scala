@@ -4,11 +4,11 @@ import slick.jdbc.PostgresProfile.api._
 
 import com.krux.starport.config.StarportSettings
 import com.krux.starport.db.table.ScheduledPipelines
-import com.krux.starport.db.{DateTimeMapped, WaitForIt}
+import com.krux.starport.db.WaitForIt
 import com.krux.starport.util.DateTimeFunctions
 
 
-trait StarportActivity extends DateTimeMapped with WaitForIt with Logging with DateTimeFunctions {
+trait StarportActivity extends WaitForIt with Logging with DateTimeFunctions {
 
   // use -Dconf.resource=application.dev.conf for testing
   implicit val conf = StarportSettings()

@@ -1,15 +1,15 @@
 package com.krux.starport.db.record
 
-import org.joda.time.DateTime
+import java.time.LocalDateTime
 
 
 case class ScheduledPipeline(
   awsId: String,
   pipelineId: Int,
   pipelineName: String,
-  scheduledStart: DateTime,
-  actualStart: DateTime,
-  deployedTime: DateTime,
+  scheduledStart: LocalDateTime,
+  actualStart: LocalDateTime,
+  deployedTime: LocalDateTime,
   status: String,
   inConsole: Boolean
 )

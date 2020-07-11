@@ -1,6 +1,7 @@
 package com.krux.starport.cli
 
-import org.joda.time.DateTime
+import java.time.LocalDateTime
+
 import scopt.OptionParser
 
 import com.krux.starport.util.PipelineState
@@ -24,7 +25,7 @@ object CleanupUnmanagedOptionParser extends Reads {
     opt[PipelineState.State]("pipelineState").valueName("<pipelineState>")
       .action((x, c) => c.copy(pipelineState = x))
 
-    opt[DateTime]("cutoffDate").valueName("<cutoffDate> default value is 2 months before")
+    opt[LocalDateTime]("cutoffDate").valueName("<cutoffDate> default value is 2 months before")
       .action((x, c) => c.copy(cutoffDate = x))
 
     opt[Unit]("dryRun").valueName("<dryRun>")

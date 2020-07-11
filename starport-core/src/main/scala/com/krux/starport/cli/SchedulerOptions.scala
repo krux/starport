@@ -1,10 +1,12 @@
 package com.krux.starport.cli
 
-import org.joda.time.DateTime
+import java.time.LocalDateTime
+
+import com.krux.starport.util.DateTimeFunctions
 
 
 case class SchedulerOptions(
-  scheduledStart: DateTime = DateTime.now,
-  scheduledEnd: DateTime = DateTime.now,
-  actualStart: DateTime = DateTime.now
+  scheduledStart: LocalDateTime = DateTimeFunctions.currentTimeUTC().toLocalDateTime,
+  scheduledEnd: LocalDateTime = DateTimeFunctions.currentTimeUTC().toLocalDateTime,
+  actualStart: LocalDateTime = DateTimeFunctions.currentTimeUTC().toLocalDateTime
 )

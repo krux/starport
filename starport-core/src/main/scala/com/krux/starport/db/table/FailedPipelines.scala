@@ -1,15 +1,14 @@
 package com.krux.starport.db.table
 
-import org.joda.time.DateTime
+import java.time.LocalDateTime
+
 import slick.jdbc.PostgresProfile.api._
 
-import com.krux.starport.db.DateTimeMapped
 import com.krux.starport.db.record.FailedPipeline
 
 
 class FailedPipelines(tag: Tag)
-  extends Table[FailedPipeline](tag, "failed_pipelines")
-  with DateTimeMapped {
+  extends Table[FailedPipeline](tag, "failed_pipelines") {
 
   def awsId = column[String]("aws_id", O.PrimaryKey, O.SqlType("VARCHAR(254)"))
 
@@ -17,7 +16,7 @@ class FailedPipelines(tag: Tag)
 
   def resolved = column[Boolean]("resolved")
 
-  def checkedTime = column[DateTime]("checked_time")
+  def checkedTime = column[LocalDateTime]("checked_time")
 
   def * = (awsId, pipelineId, resolved, checkedTime) <> (FailedPipeline.tupled, FailedPipeline.unapply)
 

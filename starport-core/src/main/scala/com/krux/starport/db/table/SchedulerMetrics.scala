@@ -1,20 +1,19 @@
 package com.krux.starport.db.table
 
-import org.joda.time.DateTime
+import java.time.LocalDateTime
+
 import slick.jdbc.PostgresProfile.api._
 
-import com.krux.starport.db.DateTimeMapped
 import com.krux.starport.db.record.SchedulerMetric
 
 
-class SchedulerMetrics(tag: Tag) extends Table[SchedulerMetric](tag, "scheduler_metrics")
-  with DateTimeMapped {
+class SchedulerMetrics(tag: Tag) extends Table[SchedulerMetric](tag, "scheduler_metrics") {
 
-  def startTime = column[DateTime]("start_time", O.PrimaryKey)
+  def startTime = column[LocalDateTime]("start_time", O.PrimaryKey)
 
   def pipelineCount = column[Option[Int]]("pipeline_count")
 
-  def endTime = column[Option[DateTime]]("end_time")
+  def endTime = column[Option[LocalDateTime]]("end_time")
 
   def * = (startTime, pipelineCount, endTime) <> (SchedulerMetric.tupled, SchedulerMetric.unapply)
 
