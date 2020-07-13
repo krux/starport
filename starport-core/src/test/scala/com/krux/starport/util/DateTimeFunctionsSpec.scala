@@ -1,61 +1,62 @@
 package com.krux.starport.util
 
-import com.github.nscala_time.time.Imports._
+import java.time.{LocalDateTime, Period}
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
+import java.time.Duration
 
 
-class DateTimeFunctionsSpec extends WordSpec {
+class DateTimeFunctionsSpec extends AnyWordSpec {
 
   "previousRunTime" should {
 
     "generate the correct time" in {
       assert(
         DateTimeFunctions.previousRunTime(
-          new DateTime("2016-12-25T00:00:00Z"),
-          1.week,
-          new DateTime("2016-12-19T16:20:00Z")
-        ) === new DateTime("2016-12-18T00:00:00.000Z")
+          LocalDateTime.of(2016, 12, 25, 0, 0, 0),
+          Period.ofWeeks(1),
+          LocalDateTime.of(2016, 12, 19, 16, 20, 0)
+        ) === LocalDateTime.of(2016, 12, 18, 0, 0, 0)
       )
 
       assert(
         DateTimeFunctions.previousRunTime(
-          new DateTime("2016-12-18T00:00:00Z"),
-          1.week,
-          new DateTime("2016-12-19T16:20:00Z")
-        ) === new DateTime("2016-12-18T00:00:00.000Z")
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0),
+          Period.ofWeeks(1),
+          LocalDateTime.of(2016, 12, 19, 16, 20, 0)
+        ) === LocalDateTime.of(2016, 12, 18, 0, 0, 0)
       )
 
       assert(
         DateTimeFunctions.previousRunTime(
-          new DateTime("2016-12-18T00:00:00Z"),
-          1.week,
-          new DateTime("2016-12-26T16:20:00Z")
-        ) === new DateTime("2016-12-18T00:00:00.000Z")
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0),
+          Period.ofWeeks(1),
+          LocalDateTime.of(2016, 12, 26, 16, 20, 0)
+        ) === LocalDateTime.of(2016, 12, 18, 0, 0, 0)
       )
 
       assert(
         DateTimeFunctions.previousRunTime(
-          new DateTime("2016-12-18T00:00:00Z"),
-          1.week,
-          new DateTime("2016-12-11T00:00:00Z")
-        ) === new DateTime("2016-12-11T00:00:00.000Z")
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0),
+          Period.ofWeeks(1),
+          LocalDateTime.of(2016, 12, 11, 0, 0, 0)
+        ) === LocalDateTime.of(2016, 12, 11, 0, 0, 0)
       )
 
       assert(
         DateTimeFunctions.previousRunTime(
-          new DateTime("2016-12-18T00:00:00Z"),
-          1.week,
-          new DateTime("2016-12-06T00:00:00Z")
-        ) === new DateTime("2016-12-04T00:00:00.000Z")
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0),
+          Period.ofWeeks(1),
+          LocalDateTime.of(2016, 12, 6, 0, 0, 0)
+        ) === LocalDateTime.of(2016, 12, 4, 0, 0, 0)
       )
 
       assert(
         DateTimeFunctions.previousRunTime(
-          new DateTime("2016-12-18T00:00:00Z"),
-          1.week,
-          new DateTime("2016-12-18T00:00:00Z")
-        ) === new DateTime("2016-12-18T00:00:00.000Z")
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0),
+          Period.ofWeeks(1),
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0)
+        ) === LocalDateTime.of(2016, 12, 18, 0, 0, 0)
       )
 
 
@@ -68,50 +69,50 @@ class DateTimeFunctionsSpec extends WordSpec {
 
       assert(
         DateTimeFunctions.nextRunTime(
-          new DateTime("2016-12-25T00:00:00Z"),
-          1.week,
-          new DateTime("2016-12-19T16:20:00Z")
-        ) === new DateTime("2016-12-25T00:00:00.000Z")
+          LocalDateTime.of(2016, 12, 25, 0, 0, 0),
+          Period.ofWeeks(1),
+          LocalDateTime.of(2016, 12, 19, 16, 20, 0)
+        ) === LocalDateTime.of(2016, 12, 25, 0, 0, 0)
       )
 
       assert(
         DateTimeFunctions.nextRunTime(
-          new DateTime("2016-12-18T00:00:00Z"),
-          1.week,
-          new DateTime("2016-12-19T16:20:00Z")
-        ) === new DateTime("2016-12-25T00:00:00.000Z")
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0),
+          Period.ofWeeks(1),
+          LocalDateTime.of(2016, 12, 19, 16, 20, 0)
+        ) === LocalDateTime.of(2016, 12, 25, 0, 0, 0)
       )
 
       assert(
         DateTimeFunctions.nextRunTime(
-          new DateTime("2016-12-18T00:00:00Z"),
-          1.week,
-          new DateTime("2016-12-26T16:20:00Z")
-        ) === new DateTime("2017-01-01T00:00:00.000Z")
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0),
+          Period.ofWeeks(1),
+          LocalDateTime.of(2016, 12, 26, 16, 20, 0)
+        ) === LocalDateTime.of(2017, 1, 1, 0, 0, 0)
       )
 
       assert(
         DateTimeFunctions.nextRunTime(
-          new DateTime("2016-12-18T00:00:00Z"),
-          1.week,
-          new DateTime("2016-12-25T00:00:00Z")
-        ) === new DateTime("2016-12-25T00:00:00.000Z")
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0),
+          Period.ofWeeks(1),
+          LocalDateTime.of(2016, 12, 25, 0, 0, 0)
+        ) === LocalDateTime.of(2016, 12, 25, 0, 0, 0)
       )
 
       assert(
         DateTimeFunctions.nextRunTime(
-          new DateTime("2016-12-18T00:00:00Z"),
-          1.week,
-          new DateTime("2017-01-01T00:00:00Z")
-        ) === new DateTime("2017-01-01T00:00:00.000Z")
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0),
+          Period.ofWeeks(1),
+          LocalDateTime.of(2017, 1, 1, 0, 0, 0)
+        ) === LocalDateTime.of(2017, 1, 1, 0, 0, 0, 0)
       )
 
       assert(
         DateTimeFunctions.nextRunTime(
-          new DateTime("2016-12-18T00:00:00Z"),
-          1.week,
-          new DateTime("2016-12-18T00:00:00Z")
-        ) === new DateTime("2016-12-18T00:00:00.000Z")
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0),
+          Period.ofWeeks(1),
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0)
+        ) === LocalDateTime.of(2016, 12, 18, 0, 0, 0)
       )
 
     }
@@ -124,33 +125,33 @@ class DateTimeFunctionsSpec extends WordSpec {
 
       assert(
         DateTimeFunctions.timesTillEnd(
-          new DateTime("2016-12-18T00:00:00Z"),
-          new DateTime("2016-12-19T00:00:00Z"),
-          1.day
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0),
+          LocalDateTime.of(2016, 12, 19, 0, 0, 0),
+          Duration.ofDays(1)
         ) === 1
       )
 
       assert(
         DateTimeFunctions.timesTillEnd(
-          new DateTime("2016-12-18T00:00:00Z"),
-          new DateTime("2016-12-19T00:00:00Z"),
-          1.hour
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0),
+          LocalDateTime.of(2016, 12, 19, 0, 0, 0),
+          Duration.ofHours(1)
         ) === 24
       )
 
       assert(
         DateTimeFunctions.timesTillEnd(
-          new DateTime("2016-12-18T00:00:00Z"),
-          new DateTime("2016-12-19T00:00:00Z"),
-          30.minutes
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0),
+          LocalDateTime.of(2016, 12, 19, 0, 0, 0),
+          Duration.ofMinutes(30)
         ) === 48
       )
 
       assert(
         DateTimeFunctions.timesTillEnd(
-          new DateTime("2016-12-18T00:00:00Z"),
-          new DateTime("2016-12-18T01:00:00Z"),
-          1.minutes
+          LocalDateTime.of(2016, 12, 18, 0, 0, 0),
+          LocalDateTime.of(2016, 12, 18, 1, 0, 0),
+          Duration.ofMinutes(1)
         ) === 60
       )
 

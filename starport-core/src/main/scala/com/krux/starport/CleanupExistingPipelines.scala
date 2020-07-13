@@ -1,8 +1,10 @@
 package com.krux.starport
 
+import java.time.LocalDateTime
+
 import com.codahale.metrics.MetricRegistry
-import com.github.nscala_time.time.Imports._
 import slick.jdbc.PostgresProfile.api._
+
 import com.krux.hyperion.client.{AwsClient, AwsClientForId}
 import com.krux.starport.db.record.FailedPipeline
 import com.krux.starport.db.table.{FailedPipelines, Pipelines, ScheduledPipelines}
@@ -104,7 +106,7 @@ object CleanupExistingPipelines extends StarportActivity {
         healthyPipelines
           .groupBy(_.actualStart)
           .toSeq
-          .sortBy(_._1)(Ordering[DateTime].reverse)
+          .sortBy(_._1)(Ordering[LocalDateTime].reverse)
           .drop(pipelineRecord.retention)
           .flatMap(_._2)
           .foreach { sp =>
@@ -116,7 +118,7 @@ object CleanupExistingPipelines extends StarportActivity {
         val (toBeKeptFailedMap, toBeDeletedFailedMap) = failedPipelines
           .groupBy(_.actualStart)
           .toSeq
-          .sortBy(_._1)(Ordering[DateTime].reverse)
+          .sortBy(_._1)(Ordering[LocalDateTime].reverse)
           .splitAt(pipelineRecord.retention)
 
         val toBeKeptFailed = toBeKeptFailedMap.flatMap(_._2)
@@ -133,7 +135,7 @@ object CleanupExistingPipelines extends StarportActivity {
               .size == 0
           }
           .foreach { sp =>
-            val failedPipeline = FailedPipeline(sp.awsId, sp.pipelineId, false, DateTime.now)
+            val failedPipeline = FailedPipeline(sp.awsId, sp.pipelineId, false, currentTimeUTC().toLocalDateTime)
             logger.info(s"insert ${failedPipeline.awsId} to failed pipelines")
             db.run(DBIO.seq(FailedPipelines() += failedPipeline)).waitForResult
           }

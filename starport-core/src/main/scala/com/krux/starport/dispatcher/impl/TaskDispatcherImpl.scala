@@ -1,23 +1,23 @@
 package com.krux.starport.dispatcher.impl
 
+import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.sys.process.{Process, ProcessLogger}
 import scala.util.{Either, Left, Right}
 
-import com.github.nscala_time.time.Imports._
-
 import com.krux.hyperion.client.{AwsClient, AwsClientForName}
 import com.krux.hyperion.expression.{Duration => HDuration}
-import com.krux.starport.dispatcher.impl.ConcurrentQueueHelpers._
-import com.krux.starport.db.record.ScheduledPipeline
-import com.krux.starport.util.DateTimeFunctions
-import com.krux.starport.config.StarportSettings
-import com.krux.starport.Logging
 import com.krux.starport.cli.SchedulerOptions
-import com.krux.starport.dispatcher.TaskDispatcher
+import com.krux.starport.config.StarportSettings
 import com.krux.starport.db.record.Pipeline
+import com.krux.starport.db.record.ScheduledPipeline
+import com.krux.starport.dispatcher.impl.ConcurrentQueueHelpers._
+import com.krux.starport.dispatcher.TaskDispatcher
 import com.krux.starport.exception.StarportException
+import com.krux.starport.Logging
+import com.krux.starport.util.DateTimeFunctions
+
 
 class TaskDispatcherImpl extends TaskDispatcher with DateTimeFunctions with Logging {
 
@@ -70,7 +70,7 @@ class TaskDispatcherImpl extends TaskDispatcher with DateTimeFunctions with Logg
              pipelineIdNameMap(awsId),
              options.scheduledStart,
              options.actualStart,
-             DateTime.now,
+             currentTimeUTC().toLocalDateTime(),
              activationStatus,
              true
            )))
@@ -85,8 +85,8 @@ class TaskDispatcherImpl extends TaskDispatcher with DateTimeFunctions with Logg
    */
   private def deployPipeline(
       pipelineRecord: Pipeline,
-      currentTime: DateTime,
-      currentEndTime: DateTime,
+      currentTime: LocalDateTime,
+      currentEndTime: LocalDateTime,
       localJar: String,
       conf: StarportSettings
     ): Either[StarportException, String] = {
@@ -96,7 +96,7 @@ class TaskDispatcherImpl extends TaskDispatcher with DateTimeFunctions with Logg
 
     val start = pipelineRecord.nextRunTime.get
     val until = pipelineRecord.end
-      .map(DateTimeOrdering.min(currentEndTime, _))
+      .map(LocalDateTimeOrdering.min(currentEndTime, _))
       .getOrElse(currentEndTime)
     val pipelinePeriod = pipelineRecord.period
 
@@ -115,7 +115,7 @@ class TaskDispatcherImpl extends TaskDispatcher with DateTimeFunctions with Logg
     }
     val times = Math.max(1, calculatedTimes)
 
-    val actualStart = DateTime.now.withZone(DateTimeZone.UTC).toString(DateTimeFormat)
+    val actualStart = currentTimeUTC().format(DateTimeFormat)
 
     val pipelineClass = pipelineRecord.`class`
     val pipelineName = s"${conf.pipelinePrefix}${actualStart}_${pipelineRecord.id.getOrElse(0)}_${pipelineClass}"
@@ -128,7 +128,7 @@ class TaskDispatcherImpl extends TaskDispatcher with DateTimeFunctions with Logg
       pipelineClass,
       "create",
       "--no-check",
-      "--start", start.toString(DateTimeFormat),
+      "--start", start.format(DateTimeFormat),
       "--times", times.toString,
       "--every", pipelinePeriod,
       "--name", pipelineName

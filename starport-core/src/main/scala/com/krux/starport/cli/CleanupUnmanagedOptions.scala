@@ -1,13 +1,14 @@
 package com.krux.starport.cli
 
-import org.joda.time.DateTime
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 
-import com.krux.starport.util.PipelineState
+import com.krux.starport.util.{PipelineState, DateTimeFunctions}
 
 case class CleanupUnmanagedOptions(
   excludePrefixes: Seq[String] = Seq(),
   pipelineState: PipelineState.State = PipelineState.FINISHED,
-  cutoffDate: DateTime = DateTime.now.minusMonths(2).withTimeAtStartOfDay,
+  cutoffDate: LocalDateTime = DateTimeFunctions.currentTimeUTC().minusMonths(2).toLocalDateTime().truncatedTo(ChronoUnit.DAYS),
   force: Boolean = false,
   dryRun: Boolean = false
 )

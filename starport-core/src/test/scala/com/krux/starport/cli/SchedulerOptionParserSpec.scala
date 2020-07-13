@@ -1,11 +1,11 @@
 package com.krux.starport.cli
 
-import org.joda.time.DateTime
+import java.time.LocalDateTime
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 
 
-class SchedulerOptionParserSpec extends WordSpec {
+class SchedulerOptionParserSpec extends AnyWordSpec {
 
   val args = Array(
     "--start",
@@ -16,7 +16,7 @@ class SchedulerOptionParserSpec extends WordSpec {
 
     "parse start" in {
       val options = SchedulerOptionParser.parse(args).get
-      assert(options.scheduledStart === new DateTime("2016-02-29T20:00:01.000-08:00"))
+      assert(options.scheduledStart === LocalDateTime.of(2016, 3, 1, 4, 0, 1))
     }
   }
 

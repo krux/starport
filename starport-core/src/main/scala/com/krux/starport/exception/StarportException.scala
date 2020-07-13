@@ -6,5 +6,6 @@ class StarportException(message: String) extends Exception(message) {
     this(message)
     initCause(cause)
   }
+
 }
 

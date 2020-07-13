@@ -1,16 +1,16 @@
 package com.krux.starport.db.table
 
-import com.github.nscala_time.time.Imports.DateTime
+import java.time.LocalDateTime
+
 import slick.jdbc.PostgresProfile.api._
 
-import com.krux.starport.db.DateTimeMapped
 import com.krux.starport.db.record.Pipeline
 
 
 /**
  * @note when scheduling, the type is always assumed to be cron
  */
-class Pipelines(tag: Tag) extends Table[Pipeline](tag, "pipelines") with DateTimeMapped {
+class Pipelines(tag: Tag) extends Table[Pipeline](tag, "pipelines") {
 
   def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
 
@@ -42,7 +42,7 @@ class Pipelines(tag: Tag) extends Table[Pipeline](tag, "pipelines") with DateTim
   /**
    * The actual start time
    */
-  def start = column[DateTime]("start")
+  def start = column[LocalDateTime]("start")
 
   /**
    * The duration period
@@ -52,12 +52,12 @@ class Pipelines(tag: Tag) extends Table[Pipeline](tag, "pipelines") with DateTim
   /**
    * When the pipline scheduling finishes, None if it runs forever
    */
-  def end = column[Option[DateTime]]("end")
+  def end = column[Option[LocalDateTime]]("end")
 
   /**
    * The next time it should run, None if it should not run
    */
-  def nextRunTime = column[Option[DateTime]]("next_run_time")
+  def nextRunTime = column[Option[LocalDateTime]]("next_run_time")
 
   /**
    * Whether the pipeline should perform back fill between the previous next run and current time

@@ -1,7 +1,5 @@
 package com.krux.starport
 
-import com.github.nscala_time.time.Imports.{DateTime, DateTimeZone}
-
 import com.krux.hyperion.action.SnsAlarm
 import com.krux.hyperion.activity.{JarActivity, MainClass}
 import com.krux.hyperion.adt.HString
@@ -27,7 +25,7 @@ object Starport extends DataPipelineDef with HyperionCli {
   val schedulerClass: MainClass = com.krux.starport.StartScheduledPipelines
   val cleanupClass: MainClass = com.krux.starport.CleanupExistingPipelines
 
-  def currentHour = DateTime.now.withZone(DateTimeZone.UTC).getHourOfDay()
+  def currentHour = DateTimeFunctions.currentTimeUTC.getHour()
 
   def schedule = Schedule.cron.startTodayAt(currentHour, 0, 0).every(1.hour)
 
@@ -38,9 +36,9 @@ object Starport extends DataPipelineDef with HyperionCli {
 
     val ec2 = Ec2Resource()
 
-    val scheduledStart = RunnableObject.ScheduledStartTime.format(DateTimeFunctions.DateTimeFormat)
-    val scheduledEnd = RunnableObject.ScheduledEndTime.format(DateTimeFunctions.DateTimeFormat)
-    val actualStart = RunnableObject.ActualStartTime.format(DateTimeFunctions.DateTimeFormat)
+    val scheduledStart = RunnableObject.ScheduledStartTime.format(DateTimeFunctions.DateTimeFormatPattern)
+    val scheduledEnd = RunnableObject.ScheduledEndTime.format(DateTimeFunctions.DateTimeFormatPattern)
+    val actualStart = RunnableObject.ActualStartTime.format(DateTimeFunctions.DateTimeFormatPattern)
 
     val schedulerArgs = Seq[HString](
         "--start", scheduledStart,

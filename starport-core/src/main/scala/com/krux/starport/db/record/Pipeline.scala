@@ -1,6 +1,6 @@
 package com.krux.starport.db.record
 
-import org.joda.time.DateTime
+import java.time.LocalDateTime
 
 
 case class Pipeline(
@@ -10,10 +10,10 @@ case class Pipeline(
   `class`: String,
   isActive: Boolean,
   retention: Int,
-  start: DateTime,
+  start: LocalDateTime,
   period: String,  // TODO make this of type period
-  end: Option[DateTime],
-  nextRunTime: Option[DateTime],
+  end: Option[LocalDateTime],
+  nextRunTime: Option[LocalDateTime],
   backfill: Boolean,
   owner: Option[String]
 )

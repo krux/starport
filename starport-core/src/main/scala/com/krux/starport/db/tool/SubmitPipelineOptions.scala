@@ -1,6 +1,6 @@
 package com.krux.starport.db.tool
 
-import com.github.nscala_time.time.Imports._
+import java.time.LocalDateTime
 
 import com.krux.hyperion.expression.Duration
 
@@ -13,7 +13,7 @@ case class SubmitPipelineOptions(
   noBackfill: Boolean = false,
   baseDir: Option[String] = None,
   cleanUp: Boolean = false,
-  schedule: Option[DateTime] = None,
+  schedule: Option[LocalDateTime] = None,
   frequency: Option[Duration] = None,
   enable: Option[Boolean] = None,
   owner: Option[String] = None,
@@ -23,4 +23,3 @@ case class SubmitPipelineOptions(
   def backfill = !noBackfill
 
 }
-

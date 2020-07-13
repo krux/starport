@@ -1,10 +1,10 @@
 package com.krux.starport.db.record
 
-import org.joda.time.DateTime
+import java.time.LocalDateTime
 
 
 case class ScheduleFailureCounter(
   pipelineId: Int,
   failureCount: Int,
-  updatedAt: DateTime
+  updatedAt: LocalDateTime
 )

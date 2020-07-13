@@ -1,18 +1,19 @@
 package com.krux.starport
 
+import java.time.LocalDateTime
 import java.util.concurrent.{ForkJoinPool, TimeUnit}
 
+import com.codahale.metrics.{Counter, MetricRegistry}
 import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.ExecutionContext.Implicits.global
-import com.codahale.metrics.{Counter, MetricRegistry}
-import com.github.nscala_time.time.Imports._
 import slick.jdbc.PostgresProfile.api._
+
 import com.krux.hyperion.expression.{Duration => HDuration}
 import com.krux.starport.cli.{SchedulerOptionParser, SchedulerOptions}
 import com.krux.starport.db.record.{Pipeline, ScheduledPipeline, SchedulerMetric}
 import com.krux.starport.db.table.{Pipelines, ScheduleFailureCounters, ScheduledPipelines, SchedulerMetrics}
-import com.krux.starport.dispatcher.TaskDispatcher
 import com.krux.starport.dispatcher.impl.TaskDispatcherImpl
+import com.krux.starport.dispatcher.TaskDispatcher
 import com.krux.starport.metric.{ConstantValueGauge, MetricSettings, SimpleTimerGauge}
 import com.krux.starport.util.{ErrorHandler, S3FileHandler}
 
@@ -38,7 +39,7 @@ object StartScheduledPipelines extends StarportActivity {
     }
     .toMap
 
-  def pendingPipelineRecords(scheduledEnd: DateTime): Seq[Pipeline] = {
+  def pendingPipelineRecords(scheduledEnd: LocalDateTime): Seq[Pipeline] = {
     logger.info("Retriving pending pipelines..")
 
     // get all jobs to be scheduled
@@ -158,7 +159,7 @@ object StartScheduledPipelines extends StarportActivity {
         SchedulerMetrics()
           .filter(_.startTime === actualStart)
           .map(_.endTime)
-          .update(Option(DateTime.now))
+          .update(Option(currentTimeUTC().toLocalDateTime))
       ))
       .waitForResult
   }

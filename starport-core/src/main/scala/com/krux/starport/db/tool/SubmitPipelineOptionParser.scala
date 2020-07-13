@@ -1,18 +1,18 @@
 package com.krux.starport.db.tool
 
-import com.krux.hyperion.expression.Duration
-import com.krux.starport.{BuildInfo, ErrorExit, Logging}
-import org.joda.time.DateTime
+import java.time.LocalDateTime
+
 import scopt.OptionParser
-import com.krux.starport.cli.Reads
+
 import com.krux.hyperion.cli.Reads._
+import com.krux.hyperion.expression.Duration
+import com.krux.starport.cli.Reads
 import com.krux.starport.util.notification.Notify
+import com.krux.starport.{BuildInfo, ErrorExit, Logging}
 
 object SubmitPipelineOptionParser extends Reads with Logging {
 
   val programName = "submit-pipeline"
-
-
 
   def apply(): OptionParser[SubmitPipelineOptions] = new OptionParser[SubmitPipelineOptions](programName) {
 
@@ -53,7 +53,7 @@ object SubmitPipelineOptionParser extends Reads with Logging {
       .text("clean up the temporary directory when done")
       .optional()
 
-    opt[DateTime]('s', "schedule").action((x, c) => c.copy(schedule = Option(x)))
+    opt[LocalDateTime]('s', "schedule").action((x, c) => c.copy(schedule = Option(x)))
       .text("""the time to run the pipeline in the format HH:mm:ss eg -s T23:45:00 will
               |        mean 11:45pm""".stripMargin)
       .optional()

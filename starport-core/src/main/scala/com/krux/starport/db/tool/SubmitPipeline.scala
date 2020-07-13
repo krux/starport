@@ -2,8 +2,8 @@ package com.krux.starport.db.tool
 
 import java.io.File
 import java.net.URLClassLoader
+import java.time.{LocalDateTime, ZoneOffset}
 
-import com.github.nscala_time.time.Imports._
 import slick.jdbc.PostgresProfile.api._
 
 import com.krux.hyperion.expression.Duration
@@ -11,13 +11,12 @@ import com.krux.hyperion.{DataPipelineDefGroup, RecurringSchedule, Schedule}
 import com.krux.starport.config.StarportSettings
 import com.krux.starport.db.record.Pipeline
 import com.krux.starport.db.table.Pipelines
-import com.krux.starport.db.{DateTimeMapped, WaitForIt}
+import com.krux.starport.db.WaitForIt
 import com.krux.starport.util.notification.SendSlackMessage
 import com.krux.starport.util.{DateTimeFunctions, LambdaNoExitSecurityManager, S3FileHandler}
 import com.krux.starport.{ErrorExit, Logging}
 
-
-object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapped with Logging {
+object SubmitPipeline extends DateTimeFunctions with WaitForIt with Logging {
 
   lazy val starportSettings = StarportSettings()
 
@@ -79,9 +78,12 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
     // Because we are using schedule from CLI it will always be Left of the HDateTime
     // This is a hacky way of solving the incompatibility of hyperion 5.3.0 that changes
     // scheduling start time from joda DateTime to HDateTime
-    def getStartTimeFromSchedule(schedule: RecurringSchedule): DateTime = {
-      require(schedule.start.isDefined && schedule.start.get.value.isLeft, "Starport does not work with empty or expression based start time")
-      schedule.start.get.value.left.get.withZone(DateTimeZone.UTC)
+    def getStartTimeFromSchedule(schedule: RecurringSchedule): LocalDateTime = {
+      require(
+        schedule.start.isDefined && schedule.start.get.value.isLeft,
+        "Starport does not work with empty or expression based start time"
+      )
+      schedule.start.get.value.left.get.withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()
     }
 
     def getPeriodFromSchedule(schedule: RecurringSchedule): Duration = {
@@ -89,11 +91,11 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
       schedule.period.value.left.get
     }
 
-    val (period, start): (Duration, DateTime) = (opts.frequency, opts.schedule) match {
+    val (period, start): (Duration, LocalDateTime) = (opts.frequency, opts.schedule) match {
       case (Some(freq), Some(schedule)) =>
         val specifiedSchedule = Schedule
           .cron
-          .startDateTime(schedule)
+          .startDateTime(schedule.atZone(ZoneOffset.UTC))
           .every(freq)
 
         (getPeriodFromSchedule(specifiedSchedule), getStartTimeFromSchedule(specifiedSchedule))
@@ -122,8 +124,8 @@ object SubmitPipeline extends DateTimeFunctions with WaitForIt with DateTimeMapp
 
     // determine the next run time
     val next =
-      if (opts.startNow) previousRunTime(start, period, DateTime.now)
-      else nextRunTime(start, period, DateTime.now)
+      if (opts.startNow) previousRunTime(start, period, currentTimeUTC().toLocalDateTime())
+      else nextRunTime(start, period, currentTimeUTC().toLocalDateTime())
 
     val pipelineRecord = Pipeline(
       None,

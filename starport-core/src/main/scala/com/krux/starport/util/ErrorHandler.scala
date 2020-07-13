@@ -1,8 +1,9 @@
 package com.krux.starport.util
 
 import scala.concurrent.{ExecutionContext, Future}
-import org.joda.time.DateTime
+
 import slick.jdbc.PostgresProfile.api._
+
 import com.krux.starport.config.StarportSettings
 import com.krux.starport.db.record.{Pipeline, ScheduleFailureCounter}
 import com.krux.starport.db.table.Pipelines
@@ -48,7 +49,12 @@ object ErrorHandler extends Logging with WaitForIt {
       } else {  // increment the count, and send the notification
         val newCount = failureCount + 1
         val setScheduleFailureCountQuery = ScheduleFailureCounters()
-          .insertOrUpdate(ScheduleFailureCounter(pipelineId, newCount, DateTime.now))
+          .insertOrUpdate(
+            ScheduleFailureCounter(pipelineId,
+              newCount,
+              DateTimeFunctions.currentTimeUTC().toLocalDateTime()
+            )
+          )
 
         // Set schedule failure count
         db.run(setScheduleFailureCountQuery).map { _ =>

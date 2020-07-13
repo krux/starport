@@ -1,10 +1,10 @@
 package com.krux.starport.db.record
 
-import org.joda.time.DateTime
+import java.time.LocalDateTime
 
 
 case class SchedulerMetric(
-  startTime: DateTime,
+  startTime: LocalDateTime,
   piplineCount: Option[Int] = None,
-  endTime: Option[DateTime] = None
+  endTime: Option[LocalDateTime] = None
 )

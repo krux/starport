@@ -1,13 +1,15 @@
 package com.krux.starport
 
-import com.github.nscala_time.time.Imports._
-import org.joda.time.DateTime
-import org.joda.time.format.{DateTimeFormat => JodaDateTimeFormat}
+import java.time.format.DateTimeFormatter
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
+
 import slick.jdbc.PostgresProfile.api._
 
 import com.krux.starport.cli.{CleanupUnmanagedOptionParser, CleanupUnmanagedOptions}
 import com.krux.starport.db.table.ScheduledPipelines
 import com.krux.starport.util.{AwsDataPipeline, PipelineStatus, PipelineState}
+
 
 object CleanupUnmanagedPipelines extends StarportActivity {
   final val AwsDateTimeFormat = "yyyy-MM-dd'T'HH:mm:ss"
@@ -15,12 +17,12 @@ object CleanupUnmanagedPipelines extends StarportActivity {
   def pipelineIdsToDelete(
       excludePrefixes: Seq[String],
       pipelineState: PipelineState.State,
-      cutoffDate: DateTime,
+      cutoffDate: LocalDateTime,
       force: Boolean
     ): Set[String] = {
 
     logger.info(s"Getting list of old ${pipelineState} unmanaged pipelines from AWS to delete...")
-    val dateTimeFormatter = JodaDateTimeFormat.forPattern(AwsDateTimeFormat)
+    val dateTimeFormatter = DateTimeFormatter.ofPattern(AwsDateTimeFormat)
 
     def shouldPipelineBeDeleted(pipelineStatus: Option[PipelineStatus]): Boolean = {
       val nst = for {
@@ -33,7 +35,7 @@ object CleanupUnmanagedPipelines extends StarportActivity {
       nst.exists { case (n, s, t) =>
         (force && n.startsWith(conf.pipelinePrefix) || !excludePrefixes.exists(n.startsWith)) &&
           s == pipelineState &&
-          dateTimeFormatter.parseDateTime(t) < cutoffDate.withTimeAtStartOfDay
+          LocalDateTime.parse(t, dateTimeFormatter).isBefore(cutoffDate.truncatedTo(ChronoUnit.DAYS))
       }
     }
 
