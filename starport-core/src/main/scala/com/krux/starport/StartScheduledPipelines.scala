@@ -96,10 +96,19 @@ object StartScheduledPipelines extends StarportActivity {
         dispatchedPipelines.inc()
         // activation successful - delete the failure counter
         db.run(ScheduleFailureCounters().filter(_.pipelineId === pipeline.id.get).delete).waitForResult
+
+        // IMPORTANT_TODO: this is a temporary fix, the next runtime should really be updated after
+        // callint `retrieve`, not here. In a distributed setting where dispatcher is remote we
+        // cannot assume successfully sending to dispatcher results in success schedule. The reason
+        // that we cannot simply add this to the updated schedule, is that it currently works to
+        // add the scheduled information in a batch manner, when process get's killed in the middle
+        // a large number of pipelins might get rescheduled in the next run, which can be very
+        // problematic.
+        //
+        // update the next run time for this pipeline
+        updateNextRunTime(pipeline, options)
     }
 
-    // update the next run time for this pipeline
-    updateNextRunTime(pipeline, options)
   }
 
   def run(options: SchedulerOptions): Unit = {
@@ -115,7 +124,8 @@ object StartScheduledPipelines extends StarportActivity {
     val failedPipelines = metrics.register("counter.failed-pipeline-deployment-count", new Counter())
 
     val taskDispatcher: TaskDispatcher = conf.dispatcherType match {
-      case "default" => new TaskDispatcherImpl()
+      case "default" =>
+        new TaskDispatcherImpl()
       case x =>
         // pipelines scheduled in a previous run should be fetched here if the dispatcher is remote
         throw new NotImplementedError(s"there is no task dispatcher implementation for $x")
@@ -148,7 +158,16 @@ object StartScheduledPipelines extends StarportActivity {
         new ForkJoinPool(parallel * Runtime.getRuntime.availableProcessors)
       )
 
-    parPipelineModels.foreach(p => processPipeline(taskDispatcher, p, options, localJars(p.jar), dispatchedPipelines, failedPipelines))
+    parPipelineModels.foreach(p =>
+      processPipeline(
+        taskDispatcher,
+        p,
+        options,
+        localJars(p.jar),
+        dispatchedPipelines,
+        failedPipelines
+      )
+    )
 
     // retrieve the scheduled pipelines and save the information in the db
     val scheduledPipelines = taskDispatcher.retrieve(conf)
