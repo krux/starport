@@ -1,7 +1,8 @@
-val awsSdkVersion = "1.11.820"
+val awsSdkVersion = "1.11.841"
 val slickVersion = "3.3.2"
+val akkaVersion = "2.6.8"
 
-val scalaTestArtifact      = "org.scalatest"          %% "scalatest"            % "3.2.0" % Test
+val scalaTestArtifact      = "org.scalatest"          %% "scalatest"            % "3.2.1" % Test
 val slickArtifact          = "com.typesafe.slick"     %% "slick"                % slickVersion
 val slickHikaricpArtifact  = "com.typesafe.slick"     %% "slick-hikaricp"       % slickVersion
 val scoptArtifact          = "com.github.scopt"       %% "scopt"                % "3.7.1"
@@ -16,15 +17,16 @@ val awsSdkSSM              = "com.amazonaws"          %  "aws-java-sdk-ssm"     
 val awsSdkSNS              = "com.amazonaws"          %  "aws-java-sdk-sns"     % awsSdkVersion
 val awsSdkCloudWatch       = "com.amazonaws"          %  "aws-java-sdk-cloudwatch"     % awsSdkVersion
 val stubbornArtifact       = "com.krux"               %% "stubborn"             % "1.4.1"
-val metricsGraphite        = "io.dropwizard.metrics"  %  "metrics-graphite"     % "4.1.10.1"
+val metricsGraphite        = "io.dropwizard.metrics"  %  "metrics-graphite"     % "4.1.12.1"
 val postgreSqlJdbc         = "org.postgresql"         %  "postgresql"           % "42.2.14"
-val awsLambdaEvents        = "com.amazonaws"          %  "aws-lambda-java-events" % "3.1.0"
+val awsLambdaEvents        = "com.amazonaws"          %  "aws-lambda-java-events" % "3.2.0"
 val awsLambdaCore          = "com.amazonaws"          %  "aws-lambda-java-core"   % "1.2.1"
 val cloudwatchMetrics      = "io.github.azagniotov"   %  "dropwizard-metrics-cloudwatch" % "1.0.13"
+val akkaActorArtifact      = "com.typesafe.akka"      %% "akka-actor-typed" % akkaVersion
 
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation", "-feature", "-Xlint", "-Xfatal-warnings"),
-  scalaVersion := "2.12.11",
+  scalaVersion := "2.12.12",
   libraryDependencies += scalaTestArtifact,
   organization := "com.krux",
   test in assembly := {},  // skip test during assembly
@@ -62,7 +64,8 @@ lazy val core = (project in file("starport-core")).
       stubbornArtifact,
       metricsGraphite,
       postgreSqlJdbc,
-      cloudwatchMetrics
+      cloudwatchMetrics,
+      akkaActorArtifact
     ),
     fork := true
   )
