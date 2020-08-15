@@ -24,9 +24,9 @@ object SchedulerActor {
     scheduleTimer: Timer,
     replyTo: ActorRef[StatusReply[Int]]
   ) = Behaviors
-    .setup(
+    .setup(context =>
       new SchedulerActor(
-        _,
+        context,
         options,
         localJars,
         numDispatchers,

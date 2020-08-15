@@ -53,7 +53,7 @@ object ScheduleService {
     scheduleTimer: Timer
   ): Future[Int] = {
     import akka.actor.typed.scaladsl.AskPattern._
-    system.askWithStatus(ref =>
+    system.askWithStatus[Int](ref =>
       ScheduleReq(
         options,
         localJars,
