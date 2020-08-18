@@ -1,21 +1,20 @@
 package com.krux.starport
 
 import java.time.LocalDateTime
-import java.util.concurrent.{ForkJoinPool, TimeUnit}
+import java.util.concurrent.TimeUnit
 
-import com.codahale.metrics.{Counter, MetricRegistry}
-import scala.collection.parallel.ForkJoinTaskSupport
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
+import com.codahale.metrics.MetricRegistry
 import slick.jdbc.PostgresProfile.api._
 
-import com.krux.hyperion.expression.{Duration => HDuration}
 import com.krux.starport.cli.{SchedulerOptionParser, SchedulerOptions}
-import com.krux.starport.db.record.{Pipeline, ScheduledPipeline, SchedulerMetric}
-import com.krux.starport.db.table.{Pipelines, ScheduleFailureCounters, ScheduledPipelines, SchedulerMetrics}
-import com.krux.starport.dispatcher.impl.TaskDispatcherImpl
-import com.krux.starport.dispatcher.TaskDispatcher
+import com.krux.starport.db.record.{Pipeline, SchedulerMetric}
+import com.krux.starport.db.table.{Pipelines, SchedulerMetrics}
 import com.krux.starport.metric.{ConstantValueGauge, MetricSettings, SimpleTimerGauge}
-import com.krux.starport.util.{ErrorHandler, S3FileHandler}
+import com.krux.starport.system.ScheduleService
+import com.krux.starport.util.S3FileHandler
 
 object StartScheduledPipelines extends StarportActivity {
 
@@ -24,8 +23,6 @@ object StartScheduledPipelines extends StarportActivity {
   lazy val reportingEngine: MetricSettings = conf.metricsEngine
 
   val scheduleTimer = metrics.timer("timers.pipeline_scheduling_time")
-
-  val extraEnvs = conf.extraEnvs.toSeq
 
   /**
    * return a map of remote jar to local jar
@@ -59,128 +56,48 @@ object StartScheduledPipelines extends StarportActivity {
     result
   }
 
-  private def updateScheduledPipelines(scheduledPipelines: Seq[ScheduledPipeline]) = {
-    scheduledPipelines.isEmpty match {
-      case true => ()
-      case false =>
-        val insertAction = DBIO.seq(ScheduledPipelines() ++= scheduledPipelines)
-        db.run(insertAction).waitForResult
-    }
-  }
-
-  private def updateNextRunTime(pipelineRecord: Pipeline, options: SchedulerOptions) = {
-    // update the next runtime in the database
-    val newNextRunTime = nextRunTime(pipelineRecord.nextRunTime.get, HDuration(pipelineRecord.period), options.scheduledEnd)
-    val updateQuery = Pipelines().filter(_.id === pipelineRecord.id).map(_.nextRunTime)
-    logger.debug(s"Update with query ${updateQuery.updateStatement}")
-    val updateAction = updateQuery.update(Some(newNextRunTime))
-    db.run(updateAction).waitForResult
-  }
-
-
-  private def processPipeline(dispatcher: TaskDispatcher, pipeline: Pipeline, options: SchedulerOptions, jar: String, dispatchedPipelines: Counter, failedPipelines: Counter): Unit = {
-    val timerInst = scheduleTimer.time()
-    logger.info(s"Dispatching pipleine ${pipeline.name}")
-
-    dispatcher.dispatch(pipeline, options, jar, conf) match {
-      case Left(ex) =>
-        ErrorHandler.pipelineScheduleFailed(pipeline, ex.getMessage())
-        logger.warn(
-          s"failed to deploy pipeline ${pipeline.name} in ${TimeUnit.SECONDS.convert(timerInst.stop(), TimeUnit.NANOSECONDS)}"
-        )
-        failedPipelines.inc()
-      case Right(r) =>
-        logger.info(
-          s"dispatched pipeline ${pipeline.name} in ${TimeUnit.SECONDS.convert(timerInst.stop(), TimeUnit.NANOSECONDS)}"
-        )
-        dispatchedPipelines.inc()
-        // activation successful - delete the failure counter
-        db.run(ScheduleFailureCounters().filter(_.pipelineId === pipeline.id.get).delete).waitForResult
-
-        // IMPORTANT_TODO: this is a temporary fix, the next runtime should really be updated after
-        // callint `retrieve`, not here. In a distributed setting where dispatcher is remote we
-        // cannot assume successfully sending to dispatcher results in success schedule. The reason
-        // that we cannot simply add this to the updated schedule, is that it currently works to
-        // add the scheduled information in a batch manner, when process get's killed in the middle
-        // a large number of pipelins might get rescheduled in the next run, which can be very
-        // problematic.
-        //
-        // update the next run time for this pipeline
-        updateNextRunTime(pipeline, options)
-    }
-
-  }
-
   def run(options: SchedulerOptions): Unit = {
-
     logger.info(s"run with options: $options")
 
     val actualStart = options.actualStart
     db.run(DBIO.seq(SchedulerMetrics() += SchedulerMetric(actualStart))).waitForResult
 
-    // in case of default taskDispatcher: the dispatchedPipelines and succesfulPipelines metrics should be exactly same.
-    val dispatchedPipelines = metrics.register("counter.successful-pipeline-dispatch-count", new Counter())
-    val successfulPipelines = metrics.register("counter.successful-pipeline-deployment-count", new Counter())
-    val failedPipelines = metrics.register("counter.failed-pipeline-deployment-count", new Counter())
-
-    val taskDispatcher: TaskDispatcher = conf.dispatcherType match {
-      case "default" =>
-        new TaskDispatcherImpl()
-      case x =>
-        // pipelines scheduled in a previous run should be fetched here if the dispatcher is remote
-        throw new NotImplementedError(s"there is no task dispatcher implementation for $x")
-    }
-
-    // fetch the pipelines which may have been scheduled in a previous runs but are not present in the database yet
-    // this operation is a no-op in case of a local dispatcher like the TaskDispatcherImpl
-    val previouslyScheduledPipelines = taskDispatcher.retrieve(conf)
-    successfulPipelines.inc(previouslyScheduledPipelines.length)
-    updateScheduledPipelines(previouslyScheduledPipelines)
-
     val pipelineModels = pendingPipelineRecords(options.scheduledEnd)
-    db.run(DBIO.seq(
+    db.run(
+      DBIO.seq(
         SchedulerMetrics()
           .filter(_.startTime === actualStart)
           .map(_.pipelineCount)
           .update(Option(pipelineModels.size))
-      ))
-      .waitForResult
+      )
+    ).waitForResult
     metrics.register("gauges.pipeline_count", new ConstantValueGauge(pipelineModels.size))
 
     // TODO: this variable can be moved to the implementation
     lazy val localJars = getLocalJars(pipelineModels)
 
-    // execute all jars
-    val parPipelineModels = pipelineModels.par
-
-    if (parallel > 0)
-      parPipelineModels.tasksupport = new ForkJoinTaskSupport(
-        new ForkJoinPool(parallel * Runtime.getRuntime.availableProcessors)
-      )
-
-    parPipelineModels.foreach(p =>
-      processPipeline(
-        taskDispatcher,
-        p,
+    Await.result(
+      ScheduleService.schedule(
         options,
-        localJars(p.jar),
-        dispatchedPipelines,
-        failedPipelines
-      )
+        localJars,
+        parallel * Runtime.getRuntime.availableProcessors,
+        pipelineModels.toList,
+        conf,
+        scheduleTimer
+      ),
+      1.hour
     )
 
-    // retrieve the scheduled pipelines and save the information in the db
-    val scheduledPipelines = taskDispatcher.retrieve(conf)
-    successfulPipelines.inc(scheduledPipelines.length)
-    updateScheduledPipelines(scheduledPipelines)
-
-    db.run(DBIO.seq(
+    db.run(
+      DBIO.seq(
         SchedulerMetrics()
           .filter(_.startTime === actualStart)
           .map(_.endTime)
           .update(Option(currentTimeUTC().toLocalDateTime))
-      ))
-      .waitForResult
+      )
+    ).waitForResult
+
+    ScheduleService.terminate
   }
 
   /**
@@ -200,7 +117,7 @@ object StartScheduledPipelines extends StarportActivity {
         case None => ErrorExit.invalidCommandlineArguments(logger)
       }
 
-      val timeSpan = (System.nanoTime - start) / 1E9
+      val timeSpan = (System.nanoTime - start) / 1e9
       logger.info(s"All pipelines scheduled in $timeSpan seconds")
     } finally {
       mainTimer.stop()
