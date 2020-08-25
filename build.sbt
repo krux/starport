@@ -1,8 +1,8 @@
-val awsSdkVersion = "1.11.841"
+val awsSdkVersion = "1.11.848"
 val slickVersion = "3.3.2"
 val akkaVersion = "2.6.8"
 
-val scalaTestArtifact      = "org.scalatest"          %% "scalatest"            % "3.2.1" % Test
+val scalaTestArtifact      = "org.scalatest"          %% "scalatest"            % "3.2.2" % Test
 val slickArtifact          = "com.typesafe.slick"     %% "slick"                % slickVersion
 val slickHikaricpArtifact  = "com.typesafe.slick"     %% "slick-hikaricp"       % slickVersion
 val scoptArtifact          = "com.github.scopt"       %% "scopt"                % "3.7.1"
@@ -18,7 +18,7 @@ val awsSdkSNS              = "com.amazonaws"          %  "aws-java-sdk-sns"     
 val awsSdkCloudWatch       = "com.amazonaws"          %  "aws-java-sdk-cloudwatch"     % awsSdkVersion
 val stubbornArtifact       = "com.krux"               %% "stubborn"             % "1.4.1"
 val metricsGraphite        = "io.dropwizard.metrics"  %  "metrics-graphite"     % "4.1.12.1"
-val postgreSqlJdbc         = "org.postgresql"         %  "postgresql"           % "42.2.14"
+val postgreSqlJdbc         = "org.postgresql"         %  "postgresql"           % "42.2.16"
 val awsLambdaEvents        = "com.amazonaws"          %  "aws-lambda-java-events" % "3.2.0"
 val awsLambdaCore          = "com.amazonaws"          %  "aws-lambda-java-core"   % "1.2.1"
 val cloudwatchMetrics      = "io.github.azagniotov"   %  "dropwizard-metrics-cloudwatch" % "1.0.13"
