@@ -12,7 +12,6 @@ import com.krux.starport.db.WaitForIt
 import com.krux.starport.Logging
 import com.krux.starport.util.notification.Notify
 
-
 /**
  * Handles database related logics for handling piplines
  */
@@ -27,30 +26,33 @@ object ErrorHandler extends Logging with WaitForIt {
    *
    * @return the SES send ID
    */
-  def pipelineScheduleFailed(pipeline: Pipeline, allOutput: String)
-    (implicit conf: StarportSettings, ec: ExecutionContext): String = {
+  def pipelineScheduleFailed(pipeline: Pipeline, allOutput: String)(implicit
+    conf: StarportSettings,
+    ec: ExecutionContext
+  ): String = {
 
     val db = conf.jdbc.db
 
     val pipelineId = pipeline.id.get
 
     def handlePipelineAndNotify(failureCount: Int): Future[String] = {
-      if (failureCount >= MaxSchedulingFailure) {  // deactivate the pipeline if it reaches max # of failures
+      if (failureCount >= MaxSchedulingFailure) { // deactivate the pipeline if it reaches max # of failures
         val deactivatePipelineQuery =
           Pipelines().filter(_.id === pipelineId).map(_.isActive).update(false)
 
         db.run(deactivatePipelineQuery).map { _ =>
           Notify(
-            s"[ACTION NEEDED] Pipeline ${pipeline.name} has been deactivated due to scheduling failure",
+            s"[ACTION NEEDED] (${conf.pipelinePrefix}) Pipeline ${pipeline.name} has been deactivated due to scheduling failure",
             allOutput,
             pipeline
           )
         }
-      } else {  // increment the count, and send the notification
+      } else { // increment the count, and send the notification
         val newCount = failureCount + 1
         val setScheduleFailureCountQuery = ScheduleFailureCounters()
           .insertOrUpdate(
-            ScheduleFailureCounter(pipelineId,
+            ScheduleFailureCounter(
+              pipelineId,
               newCount,
               DateTimeFunctions.currentTimeUTC().toLocalDateTime()
             )
@@ -59,7 +61,7 @@ object ErrorHandler extends Logging with WaitForIt {
         // Set schedule failure count
         db.run(setScheduleFailureCountQuery).map { _ =>
           Notify(
-            s"[ACTION NEEDED] Pipeline ${pipeline.name} failed to schedule ($newCount/$MaxSchedulingFailure)",
+            s"[ACTION NEEDED] (${conf.pipelinePrefix}) Pipeline ${pipeline.name} failed to schedule ($newCount/$MaxSchedulingFailure)",
             s"It will be deactivated after the number of schedule failures reach $MaxSchedulingFailure\n\n$allOutput",
             pipeline
           )
@@ -68,7 +70,8 @@ object ErrorHandler extends Logging with WaitForIt {
     }
 
     val result: Future[String] = for {
-      failureCounts <- db.run(ScheduleFailureCounters().filter(c => c.pipelineId === pipelineId).take(1).result)
+      failureCounts <-
+        db.run(ScheduleFailureCounters().filter(c => c.pipelineId === pipelineId).take(1).result)
       failureCount = failureCounts.headOption.map(_.failureCount).getOrElse(0)
       notifyReqId <- handlePipelineAndNotify(failureCount)
     } yield notifyReqId
@@ -80,12 +83,13 @@ object ErrorHandler extends Logging with WaitForIt {
   /**
    * @return the SES send ID
    */
-  def cleanupActivityFailed(pipeline: Pipeline, stackTrace: Array[StackTraceElement])
-    (implicit conf: StarportSettings): String = {
+  def cleanupActivityFailed(pipeline: Pipeline, stackTrace: Array[StackTraceElement])(implicit
+    conf: StarportSettings
+  ): String = {
     val stackTraceMessage = stackTrace.mkString("\n")
     logger.warn(s"cleanup activity failed for pipeline ${pipeline.id}, because: $stackTraceMessage")
     Notify(
-      s"[Starport Cleanup Failure] cleanup activity failed for ${pipeline.name}",
+      s"[Starport Cleanup Failure] (${conf.pipelinePrefix}) cleanup activity failed for ${pipeline.name}",
       stackTraceMessage,
       pipeline
     )
