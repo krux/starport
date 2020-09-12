@@ -17,7 +17,6 @@ object ScheduleService {
   sealed trait Msg
   case class ScheduleReq(
     options: SchedulerOptions,
-    localJars: Map[String, String],
     numDispatchers: Int,
     pipelines: List[Pipeline],
     starportSetting: StarportSettings,
@@ -30,7 +29,6 @@ object ScheduleService {
       context.spawnAnonymous(
         SchedulerActor(
           r.options,
-          r.localJars,
           r.numDispatchers,
           r.pipelines,
           r.starportSetting,
@@ -46,7 +44,6 @@ object ScheduleService {
   // TODO make sure this can only be called one a time
   def schedule(
     options: SchedulerOptions,
-    localJars: Map[String, String],
     numDispatchers: Int,
     pipelines: List[Pipeline],
     starportSetting: StarportSettings,
@@ -56,7 +53,6 @@ object ScheduleService {
     system.askWithStatus[Int](ref =>
       ScheduleReq(
         options,
-        localJars,
         numDispatchers,
         pipelines,
         starportSetting,
