@@ -3,18 +3,16 @@ package com.krux.starport
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
-
 import com.codahale.metrics.MetricRegistry
-import slick.jdbc.PostgresProfile.api._
-
 import com.krux.starport.cli.{SchedulerOptionParser, SchedulerOptions}
 import com.krux.starport.db.record.{Pipeline, SchedulerMetric}
 import com.krux.starport.db.table.{Pipelines, SchedulerMetrics}
 import com.krux.starport.metric.{ConstantValueGauge, MetricSettings, SimpleTimerGauge}
-import com.krux.starport.system.ScheduleService
-import com.krux.starport.util.S3FileHandler
+import com.krux.starport.system.{RemoteScheduleService, ScheduleService}
+import slick.jdbc.PostgresProfile.api._
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 object StartScheduledPipelines extends StarportActivity {
 
@@ -23,18 +21,6 @@ object StartScheduledPipelines extends StarportActivity {
   lazy val reportingEngine: MetricSettings = conf.metricsEngine
 
   val scheduleTimer = metrics.timer("timers.pipeline_scheduling_time")
-
-  /**
-   * return a map of remote jar to local jar
-   */
-  def getLocalJars(pipelineModels: Seq[Pipeline]): Map[String, String] = pipelineModels
-    .map(_.jar)
-    .toSet[String]
-    .map { remoteFile =>
-      val localFile = S3FileHandler.getFileFromS3(remoteFile)
-      remoteFile -> localFile.getAbsolutePath
-    }
-    .toMap
 
   def pendingPipelineRecords(scheduledEnd: LocalDateTime): Seq[Pipeline] = {
     logger.info("Retriving pending pipelines..")
@@ -73,20 +59,22 @@ object StartScheduledPipelines extends StarportActivity {
     ).waitForResult
     metrics.register("gauges.pipeline_count", new ConstantValueGauge(pipelineModels.size))
 
-    // TODO: this variable can be moved to the implementation
-    lazy val localJars = getLocalJars(pipelineModels)
+    if (conf.isRemoteSchedulerEnabled) {
 
-    Await.result(
-      ScheduleService.schedule(
-        options,
-        localJars,
-        parallel * Runtime.getRuntime.availableProcessors,
-        pipelineModels.toList,
-        conf,
-        scheduleTimer
-      ),
-      1.hour
-    )
+      RemoteScheduleService.schedule(options, pipelineModels.toList, conf)
+
+    } else {
+      Await.result(
+        ScheduleService.schedule(
+          options,
+          parallel * Runtime.getRuntime.availableProcessors,
+          pipelineModels.toList,
+          conf,
+          scheduleTimer
+        ),
+        1.hour
+      )
+    }
 
     db.run(
       DBIO.seq(

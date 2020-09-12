@@ -1,6 +1,7 @@
 val awsSdkVersion = "1.11.848"
 val slickVersion = "3.3.2"
 val akkaVersion = "2.6.8"
+val circeVersion = "0.13.0"
 
 val scalaTestArtifact      = "org.scalatest"          %% "scalatest"            % "3.2.2" % Test
 val slickArtifact          = "com.typesafe.slick"     %% "slick"                % slickVersion
@@ -23,6 +24,9 @@ val awsLambdaEvents        = "com.amazonaws"          %  "aws-lambda-java-events
 val awsLambdaCore          = "com.amazonaws"          %  "aws-lambda-java-core"   % "1.2.1"
 val cloudwatchMetrics      = "io.github.azagniotov"   %  "dropwizard-metrics-cloudwatch" % "1.0.13"
 val akkaActorArtifact      = "com.typesafe.akka"      %% "akka-actor-typed" % akkaVersion
+val circeCore              = "io.circe"               %% "circe-core"           % circeVersion
+val circeGeneric           = "io.circe"               %% "circe-generic"        % circeVersion
+val circeParser            = "io.circe"               %% "circe-parser"         % circeVersion
 
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation", "-feature", "-Xlint", "-Xfatal-warnings"),
@@ -65,7 +69,10 @@ lazy val core = (project in file("starport-core")).
       metricsGraphite,
       postgreSqlJdbc,
       cloudwatchMetrics,
-      akkaActorArtifact
+      akkaActorArtifact,
+      circeCore,
+      circeGeneric,
+      circeParser
     ),
     fork := true
   )

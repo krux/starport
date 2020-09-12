@@ -4,10 +4,10 @@ import akka.actor.typed.scaladsl._
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.pattern.StatusReply
 import com.codahale.metrics.Timer
-
 import com.krux.starport.cli.SchedulerOptions
 import com.krux.starport.config.StarportSettings
 import com.krux.starport.db.record.Pipeline
+import com.krux.starport.util.S3FileHandler
 
 object SchedulerActor {
 
@@ -17,7 +17,6 @@ object SchedulerActor {
 
   def apply(
     options: SchedulerOptions,
-    localJars: Map[String, String],
     numDispatchers: Int,
     pipelines: List[Pipeline],
     starportSetting: StarportSettings,
@@ -28,7 +27,6 @@ object SchedulerActor {
       new SchedulerActor(
         context,
         options,
-        localJars,
         numDispatchers,
         pipelines,
         starportSetting,
@@ -42,7 +40,6 @@ object SchedulerActor {
 class SchedulerActor(
   context: ActorContext[SchedulerActor.Msg],
   options: SchedulerOptions,
-  localJars: Map[String, String],
   numDispatchers: Int,
   pipelines: List[Pipeline],
   starportSetting: StarportSettings,
@@ -58,6 +55,8 @@ class SchedulerActor(
     .map(i => context.spawn(DispatcherActor(starportSetting), s"pipeline-dispatcher-$i"))
 
   val dispatcherRespAdaptor = context.messageAdapter(WrappedDispatcherResp.apply)
+
+  val localJars = getLocalJars(pipelines)
 
   // Actor states
   var pipelinesToBeScheduled: List[Pipeline] = pipelines
@@ -118,4 +117,15 @@ class SchedulerActor(
 
   }
 
+  /**
+   * return a map of remote jar to local jar
+   */
+  def getLocalJars(pipelineModels: Seq[Pipeline]): Map[String, String] = pipelineModels
+    .map(_.jar)
+    .toSet[String]
+    .map { remoteFile =>
+      val localFile = S3FileHandler.getFileFromS3(remoteFile)
+      remoteFile -> localFile.getAbsolutePath
+    }
+    .toMap
 }

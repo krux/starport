@@ -66,6 +66,11 @@ class StarportSettings(val config: Config) extends Serializable {
   else {
     config.getString("krux.starport.notification.sns")
   }
+
+  val isRemoteSchedulerEnabled: Boolean = config.getBoolean("krux.starport.remote.scheduler.is_enabled")
+  val remoteSchedulerReturnAddress: String = config.getString("krux.starport.remote.scheduler.sqs_return_address")
+  val remoteSchedulerToAddress: String = config.getString("krux.starport.remote.scheduler.sqs_to_address")
+  val awsEndpointUrl: Option[String] = Try(config.getString("krux.starport.remote.scheduler.aws_endpoint_url")).toOption
 }
 
 object StarportSettings {
