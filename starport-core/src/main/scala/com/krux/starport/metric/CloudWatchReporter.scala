@@ -47,17 +47,19 @@ case class CloudWatchReporter(builder: Builder)
 
   private val highResolution: Boolean = builder.highResolution
 
-  override def report(gauges: SortedMap[String, Gauge[Long]],
-             counters: SortedMap[String, Counter],
-             histograms: SortedMap[String, Histogram],
-             meters: SortedMap[String, Meter],
-             timers: SortedMap[String, Timer]): Unit = {
+  override def report(
+             gauges: java.util.SortedMap[String, Gauge[_]],
+             counters: java.util.SortedMap[String, Counter],
+             histograms: java.util.SortedMap[String, Histogram],
+             meters: java.util.SortedMap[String, Meter],
+             timers: java.util.SortedMap[String, Timer]): Unit = {
+
     if (builder.dryRun) {
       LOGGER.warn("** Reporter is running in 'DRY RUN' mode **")
     }
     try {
       val metricData: List[MetricDatum] = new ArrayList[MetricDatum](gauges.size + counters.size + 10 * histograms.size + 10 * timers.size)
-      gauges.forEach{ case (k: String, v: Gauge[Long]) => processGauge(k, v, metricData) }
+      gauges.forEach{ case (k: String, v: Gauge[_]) => processGauge(k, v, metricData) }
       counters.forEach{ case (k: String, v: Counter)=> processCounter(k, v, metricData) }
       histograms.forEach{ case (k: String, v: Histogram)=> {
         processHistogram(k, v, metricData)
@@ -130,8 +132,8 @@ case class CloudWatchReporter(builder: Builder)
     }
   }
 
-  private def processGauge(metricName: String,
-                           gauge: Gauge[Long],
+  private def processGauge[_ <: Numeric[_]](metricName: String,
+                           gauge: Gauge[_],
                            metricData: List[MetricDatum]): Unit = {
     Optional
       .ofNullable(gauge.getValue)
@@ -139,7 +141,7 @@ case class CloudWatchReporter(builder: Builder)
         value =>
           stageMetricDatum(true,
                            metricName,
-                           value.doubleValue(),
+                           value.asInstanceOf[Double],
                            StandardUnit.None,
                            DIMENSION_GAUGE,
                            metricData))
