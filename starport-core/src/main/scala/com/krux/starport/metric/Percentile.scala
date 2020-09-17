@@ -55,4 +55,3 @@ case object P999 extends Percentile {
   val description = "99.9%"
 
 }
-

@@ -29,7 +29,6 @@ final case object DefaultConsoleReporterSettings extends MetricSettings {
 
 }
 
-
 final case class GraphiteReporterSettings(config: Config) extends MetricSettings {
 
   val hosts = config.getStringList("hosts")
@@ -66,7 +65,8 @@ final case class CloudWatchReporterSettings(config: Config) extends MetricSettin
 
   def getReporter(metricRegistry: MetricRegistry): CloudWatchReporter = CloudWatchReporter
     .forRegistry(metricRegistry, awsCloudWatchAsyncClient, "Starport")
-    .convertRatesTo(TimeUnit.SECONDS).convertDurationsTo(TimeUnit.MILLISECONDS)
+    .convertRatesTo(TimeUnit.SECONDS)
+    .convertDurationsTo(TimeUnit.MILLISECONDS)
     .filter(MetricFilter.ALL)
     .withPercentiles(P75, P99)
     .withOneMinuteMeanRate()
