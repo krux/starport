@@ -82,7 +82,7 @@ case class CloudWatchReporter(builder: Builder)
   ): Unit = {
 
     if (builder.dryRun) {
-      LOGGER.warn("** Reporter is running in 'DRY RUN' mode **")
+      logger.warn("** Reporter is running in 'DRY RUN' mode **")
     }
     try {
       val metricData: List[MetricDatum] = new ArrayList[MetricDatum](
@@ -112,7 +112,7 @@ case class CloudWatchReporter(builder: Builder)
       }
 
       val metricDataPartitions: Collection[List[MetricDatum]] =
-        CollectionsUtils.partition(metricData, MAXIMUM_DATUMS_PER_REQUEST)
+        CollectionsUtils.partition(metricData, maximumDatumsPerRequest)
       val cloudWatchFutures: List[Future[PutMetricDataResult]] =
         new ArrayList[Future[PutMetricDataResult]](metricData.size)
 
@@ -121,8 +121,8 @@ case class CloudWatchReporter(builder: Builder)
           .withNamespace(namespace)
           .withMetricData(partition)
         if (builder.dryRun) {
-          if (LOGGER.isDebugEnabled) {
-            LOGGER.debug("Dry run - constructed PutMetricDataRequest: {}", putMetricDataRequest)
+          if (logger.isDebugEnabled) {
+            logger.debug("Dry run - constructed PutMetricDataRequest: {}", putMetricDataRequest)
           }
         } else {
           cloudWatchFutures.add(cloudWatchAsyncClient.putMetricDataAsync(putMetricDataRequest))
@@ -133,7 +133,7 @@ case class CloudWatchReporter(builder: Builder)
         try cloudWatchFuture.get
         catch {
           case e: Exception =>
-            LOGGER.error(
+            logger.error(
               "Error reporting metrics to CloudWatch. The data in this CloudWatch API request " +
                 "may have been discarded, did not make it to CloudWatch.",
               e
@@ -142,14 +142,14 @@ case class CloudWatchReporter(builder: Builder)
         }
       })
 
-      if (LOGGER.isDebugEnabled) {
-        LOGGER.debug(
+      if (logger.isDebugEnabled) {
+        logger.debug(
           s"Sent ${metricData.size} datums to CloudWatch. Namespace: ${namespace}, metric data ${metricData}."
         )
       }
     } catch {
       case e: RuntimeException =>
-        LOGGER.error("Error marshalling CloudWatch metrics.", e)
+        logger.error("Error marshalling CloudWatch metrics.", e)
 
     }
   }
@@ -157,13 +157,13 @@ case class CloudWatchReporter(builder: Builder)
   override def stop(): Unit = {
     try super.stop()
     catch {
-      case e: Exception => LOGGER.error("Error when stopping the reporter.", e)
+      case e: Exception => logger.error("Error when stopping the reporter.", e)
 
     } finally if (!builder.dryRun) {
       try cloudWatchAsyncClient.shutdown()
       catch {
         case e: Exception =>
-          LOGGER.error("Error shutting down AmazonCloudWatchAsync", e)
+          logger.error("Error shutting down AmazonCloudWatchAsync", e)
 
       }
     }
@@ -182,7 +182,7 @@ case class CloudWatchReporter(builder: Builder)
           metricName,
           value.asInstanceOf[Double],
           StandardUnit.None,
-          DIMENSION_GAUGE,
+          dimensionGauge,
           metricData
         )
       )
@@ -203,7 +203,7 @@ case class CloudWatchReporter(builder: Builder)
     reportValue =
       if (builder.reportRawCountValue) currentCount
       else currentCount - lastCount
-    stageMetricDatum(true, metricName, reportValue, StandardUnit.Count, DIMENSION_COUNT, metricData)
+    stageMetricDatum(true, metricName, reportValue, StandardUnit.Count, dimensionCount, metricData)
   }
 
   /**
@@ -298,7 +298,7 @@ case class CloudWatchReporter(builder: Builder)
         metricName,
         convertDuration(snapshot.getMean),
         durationUnit,
-        DIMENSION_SNAPSHOT_MEAN + formattedDuration,
+        dimensionSnapshotMean + formattedDuration,
         metricData
       )
       stageMetricDatum(
@@ -306,7 +306,7 @@ case class CloudWatchReporter(builder: Builder)
         metricName,
         convertDuration(snapshot.getStdDev),
         durationUnit,
-        DIMENSION_SNAPSHOT_STD_DEV + formattedDuration,
+        dimensionSnapshotStdDev + formattedDuration,
         metricData
       )
       stageMetricDatumWithConvertedSnapshot(
@@ -359,7 +359,7 @@ case class CloudWatchReporter(builder: Builder)
         metricName,
         snapshot.getMean,
         StandardUnit.None,
-        DIMENSION_SNAPSHOT_MEAN,
+        dimensionSnapshotMean,
         metricData
       )
       stageMetricDatum(
@@ -367,7 +367,7 @@ case class CloudWatchReporter(builder: Builder)
         metricName,
         snapshot.getStdDev,
         StandardUnit.None,
-        DIMENSION_SNAPSHOT_STD_DEV,
+        dimensionSnapshotStdDev,
         metricData
       )
       stageMetricDatumWithRawSnapshot(
@@ -404,7 +404,7 @@ case class CloudWatchReporter(builder: Builder)
 
       dimensions.add(
         new Dimension()
-          .withName(DIMENSION_NAME_TYPE)
+          .withName(dimensionNameType)
           .withValue(dimensionValue)
       )
 
@@ -417,8 +417,8 @@ case class CloudWatchReporter(builder: Builder)
           .withMetricName(dimensionedName.name)
           .withDimensions(dimensions)
           .withStorageResolution(
-            if (highResolution) HIGH_RESOLUTION
-            else STANDARD_RESOLUTION
+            if (highResolution) highResolution
+            else standardResolution
           )
           .withUnit(standardUnit)
       )
@@ -447,8 +447,8 @@ case class CloudWatchReporter(builder: Builder)
         new LinkedHashSet[Dimension](builder.globalDimensions)
       dimensions.add(
         new Dimension()
-          .withName(DIMENSION_NAME_TYPE)
-          .withValue(DIMENSION_SNAPSHOT_SUMMARY)
+          .withName(dimensionNameType)
+          .withValue(dimensionSnapshotSummary)
       )
 
       dimensions.addAll(dimensionedName.getDimensions.asJavaCollection)
@@ -459,8 +459,8 @@ case class CloudWatchReporter(builder: Builder)
           .withDimensions(dimensions)
           .withStatisticValues(statisticSet)
           .withStorageResolution(
-            if (highResolution) HIGH_RESOLUTION
-            else STANDARD_RESOLUTION
+            if (highResolution) highResolution
+            else standardResolution
           )
           .withUnit(standardUnit)
       )
@@ -489,8 +489,8 @@ case class CloudWatchReporter(builder: Builder)
 
       dimensions.add(
         new Dimension()
-          .withName(DIMENSION_NAME_TYPE)
-          .withValue(DIMENSION_SNAPSHOT_SUMMARY)
+          .withName(dimensionNameType)
+          .withValue(dimensionSnapshotSummary)
       )
 
       dimensions.addAll(dimensionedName.getDimensions().asJavaCollection)
@@ -501,7 +501,7 @@ case class CloudWatchReporter(builder: Builder)
           .withMetricName(dimensionedName.name)
           .withDimensions(dimensions)
           .withStatisticValues(statisticSet)
-          .withStorageResolution(if (highResolution) HIGH_RESOLUTION else STANDARD_RESOLUTION)
+          .withStorageResolution(if (highResolution) highResolution else standardResolution)
           .withUnit(standardUnit)
       )
     }
@@ -509,20 +509,20 @@ case class CloudWatchReporter(builder: Builder)
 
   private def cleanMetricValue(metricValue: Double): Double = {
     val absoluteValue: Double = Math.abs(metricValue)
-    if (absoluteValue < SMALLEST_SENDABLE_VALUE) {
-// Allow 0 through untouched, everything else gets rounded to SMALLEST_SENDABLE_VALUE
+    if (absoluteValue < smallestSendableValue) {
+// Allow 0 through untouched, everything else gets rounded to smallestSendableValue
       if (absoluteValue > 0) {
         if (metricValue < 0) {
-          -SMALLEST_SENDABLE_VALUE
+          -smallestSendableValue
         } else {
-          SMALLEST_SENDABLE_VALUE
+          smallestSendableValue
         }
       }
-    } else if (absoluteValue > LARGEST_SENDABLE_VALUE) {
+    } else if (absoluteValue > largestSendableValue) {
       if (metricValue < 0) {
-        -LARGEST_SENDABLE_VALUE
+        -largestSendableValue
       } else {
-        LARGEST_SENDABLE_VALUE
+        largestSendableValue
       }
     }
     metricValue
@@ -532,25 +532,25 @@ case class CloudWatchReporter(builder: Builder)
 
 object CloudWatchReporter {
 
-  private val LOGGER: Logger = LoggerFactory.getLogger(classOf[CloudWatchReporter])
+  private val logger: Logger = LoggerFactory.getLogger(classOf[CloudWatchReporter])
 
   // Visible for testing
-  val DIMENSION_NAME_TYPE: String = "Type"
+  val dimensionNameType: String = "Type"
 
   // Visible for testing
-  val DIMENSION_GAUGE: String = "gauge"
+  val dimensionGauge: String = "gauge"
 
   // Visible for testing
-  val DIMENSION_COUNT: String = "count"
+  val dimensionCount: String = "count"
 
   // Visible for testing
-  val DIMENSION_SNAPSHOT_SUMMARY: String = "snapshot-summary"
+  val dimensionSnapshotSummary: String = "snapshot-summary"
 
   // Visible for testing
-  val DIMENSION_SNAPSHOT_MEAN: String = "snapshot-mean"
+  val dimensionSnapshotMean: String = "snapshot-mean"
 
   // Visible for testing
-  val DIMENSION_SNAPSHOT_STD_DEV: String = "snapshot-std-dev"
+  val dimensionSnapshotStdDev: String = "snapshot-std-dev"
 
   /**
    * PutMetricData function accepts an optional StorageResolution parameter.
@@ -559,9 +559,9 @@ object CloudWatchReporter {
    * PutMetricData function accepts an optional StorageResolution parameter.
    * 1 = publish high-resolution metrics, 60 = publish at standard 1-minute resolution.
    */
-  private val HIGH_RESOLUTION: Int = 1
+  private val highResolution: Int = 1
 
-  private val STANDARD_RESOLUTION: Int = 60
+  private val standardResolution: Int = 60
 
   /**
    * Amazon CloudWatch rejects values that are either too small or too large.
@@ -574,16 +574,16 @@ object CloudWatchReporter {
    * <p>
    * In addition, special values (e.g., NaN, +Infinity, -Infinity) are not supported.
    */
-  private val SMALLEST_SENDABLE_VALUE: Double = 8.515920e-109
+  private val smallestSendableValue: Double = 8.515920e-109
 
-  private val LARGEST_SENDABLE_VALUE: Double = 1.174271e+108
+  private val largestSendableValue: Double = 1.174271e+108
 
   /**
    * Each CloudWatch API request may contain at maximum 20 datums
    */ /**
    * Each CloudWatch API request may contain at maximum 20 datums
    */
-  private val MAXIMUM_DATUMS_PER_REQUEST: Int = 20
+  private val maximumDatumsPerRequest: Int = 20
 
   /**
    * Creates a new {@link Builder} that sends values from the given {@link MetricRegistry} to the given namespace
