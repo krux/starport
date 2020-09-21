@@ -1,6 +1,5 @@
 package com.krux.starport.metric
 
-import java.lang.management.ManagementFactory
 import java.util._
 import java.util.concurrent.{ConcurrentHashMap, Future, TimeUnit}
 
@@ -27,14 +26,6 @@ import com.codahale.metrics.{
   ScheduledReporter,
   Snapshot,
   Timer
-}
-import com.codahale.metrics.jvm.{
-  BufferPoolMetricSet,
-  ClassLoadingGaugeSet,
-  FileDescriptorRatioGauge,
-  GarbageCollectorMetricSet,
-  MemoryUsageGaugeSet,
-  ThreadStatesGaugeSet
 }
 import org.slf4j.{Logger, LoggerFactory}
 import CloudWatchReporter._
@@ -417,8 +408,8 @@ case class CloudWatchReporter(builder: Builder)
           .withMetricName(dimensionedName.name)
           .withDimensions(dimensions)
           .withStorageResolution(
-            if (highResolution) highResolution
-            else standardResolution
+            if (highResolution) highResolutionFrequency
+            else standardResolutionFrequency
           )
           .withUnit(standardUnit)
       )
@@ -459,8 +450,8 @@ case class CloudWatchReporter(builder: Builder)
           .withDimensions(dimensions)
           .withStatisticValues(statisticSet)
           .withStorageResolution(
-            if (highResolution) highResolution
-            else standardResolution
+            if (highResolution) highResolutionFrequency
+            else standardResolutionFrequency
           )
           .withUnit(standardUnit)
       )
@@ -501,7 +492,7 @@ case class CloudWatchReporter(builder: Builder)
           .withMetricName(dimensionedName.name)
           .withDimensions(dimensions)
           .withStatisticValues(statisticSet)
-          .withStorageResolution(if (highResolution) highResolution else standardResolution)
+          .withStorageResolution(if (highResolution) highResolutionFrequency else standardResolutionFrequency)
           .withUnit(standardUnit)
       )
     }
@@ -555,20 +546,12 @@ object CloudWatchReporter {
   /**
    * PutMetricData function accepts an optional StorageResolution parameter.
    * 1 = publish high-resolution metrics, 60 = publish at standard 1-minute resolution.
-   */ /**
-   * PutMetricData function accepts an optional StorageResolution parameter.
-   * 1 = publish high-resolution metrics, 60 = publish at standard 1-minute resolution.
    */
-  private val highResolution: Int = 1
+  private val highResolutionFrequency: Int = 1
 
-  private val standardResolution: Int = 60
+  private val standardResolutionFrequency: Int = 60
 
   /**
-   * Amazon CloudWatch rejects values that are either too small or too large.
-   * Values must be in the range of 8.515920e-109 to 1.174271e+108 (Base 10) or 2e-360 to 2e360 (Base 2).
-   * <p>
-   * In addition, special values (e.g., NaN, +Infinity, -Infinity) are not supported.
-   */ /**
    * Amazon CloudWatch rejects values that are either too small or too large.
    * Values must be in the range of 8.515920e-109 to 1.174271e+108 (Base 10) or 2e-360 to 2e360 (Base 2).
    * <p>
@@ -580,9 +563,7 @@ object CloudWatchReporter {
 
   /**
    * Each CloudWatch API request may contain at maximum 20 datums
-   */ /**
-   * Each CloudWatch API request may contain at maximum 20 datums
-   */
+   */ 
   private val maximumDatumsPerRequest: Int = 20
 
   /**
@@ -888,26 +869,9 @@ object CloudWatchReporter {
     }
 
     def build(): CloudWatchReporter = {
-      if (jvmMetrics) {
-        metricRegistry.register(
-          "jvm.uptime",
-          ManagementFactory.getRuntimeMXBean.getUptime.asInstanceOf[Gauge[Long]]
-        )
-        metricRegistry.register("jvm.current_time", clock.getTime.asInstanceOf[Gauge[Long]])
-        metricRegistry.register("jvm.classes", new ClassLoadingGaugeSet())
-        metricRegistry.register("jvm.fd_usage", new FileDescriptorRatioGauge())
-        metricRegistry.register(
-          "jvm.buffers",
-          new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer)
-        )
-        metricRegistry.register("jvm.gc", new GarbageCollectorMetricSet())
-        metricRegistry.register("jvm.memory", new MemoryUsageGaugeSet())
-        metricRegistry.register("jvm.thread-states", new ThreadStatesGaugeSet())
-      }
       cwRateUnit = cwMeterUnit.orElse(toStandardUnit(rateUnit))
       cwDurationUnit = toStandardUnit(durationUnit)
       new CloudWatchReporter(this)
-
     }
 
     private def toStandardUnit(timeUnit: TimeUnit): StandardUnit =

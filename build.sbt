@@ -18,7 +18,6 @@ val awsSdkSNS              = "com.amazonaws"          %  "aws-java-sdk-sns"     
 val awsSdkCloudWatch       = "com.amazonaws"          %  "aws-java-sdk-cloudwatch"     % awsSdkVersion
 val stubbornArtifact       = "com.krux"               %% "stubborn"             % "1.4.1"
 val metricsGraphite        = "io.dropwizard.metrics"  %  "metrics-graphite"     % "4.1.12.1"
-val metricsJvm             = "io.dropwizard.metrics"  %  "metrics-jvm"          % "4.1.12.1"
 val postgreSqlJdbc         = "org.postgresql"         %  "postgresql"           % "42.2.16"
 val awsLambdaEvents        = "com.amazonaws"          %  "aws-lambda-java-events" % "3.2.0"
 val awsLambdaCore          = "com.amazonaws"          %  "aws-lambda-java-core"   % "1.2.1"
@@ -63,7 +62,6 @@ lazy val core = (project in file("starport-core")).
       awsSdkCloudWatch,
       stubbornArtifact,
       metricsGraphite,
-      metricsJvm,
       postgreSqlJdbc,
       akkaActorArtifact
     ),
