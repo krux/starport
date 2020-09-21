@@ -6,7 +6,7 @@ import scala.collection.mutable.Map
 
 class DimensionedNameBuilder(
   name: String,
-  var dimensions: Map[String, Dimension] = Map().empty
+  val dimensions: Map[String, Dimension] = Map().empty
 ) {
 
   def build(): DimensionedName = new DimensionedName(this.name, this.dimensions)
