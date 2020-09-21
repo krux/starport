@@ -39,7 +39,7 @@ import com.krux.starport.metric.CloudWatchReporter._
  * There are a bunch of {@code with*} methods that provide a sufficient fine-grained control over what metrics
  * should be reported
  */
-case class CloudWatchReporter(builder: Builder)
+class CloudWatchReporter(builder: Builder)
     extends ScheduledReporter(
       builder.metricRegistry,
       "coda-hale-metrics-cloud-watch-reporter",
