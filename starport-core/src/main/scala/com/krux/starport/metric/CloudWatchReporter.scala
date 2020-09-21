@@ -28,7 +28,7 @@ import com.codahale.metrics.{
   Timer
 }
 import org.slf4j.{Logger, LoggerFactory}
-import CloudWatchReporter._
+import com.krux.starport.metric.CloudWatchReporter._
 
 /**
  * Reports metrics to <a href="http://aws.amazon.com/cloudwatch/">Amazon's CloudWatch</a> periodically.
