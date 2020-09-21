@@ -4,7 +4,7 @@ import com.amazonaws.services.cloudwatch.model.Dimension
 
 import scala.collection.mutable.Map
 
-case class DimensionedNameBuilder(
+class DimensionedNameBuilder(
   name: String,
   var dimensions: Map[String, Dimension] = Map().empty
 ) {
