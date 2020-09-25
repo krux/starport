@@ -160,23 +160,20 @@ class CloudWatchReporter(builder: Builder)
     }
   }
 
-  private def processGauge[_ <: Numeric[_]](
+  private def processGauge(
     metricName: String,
     gauge: Gauge[_],
     metricData: List[MetricDatum]
   ): Unit = {
-    Optional
-      .ofNullable(gauge.getValue)
-      .ifPresent(value =>
-        stageMetricDatum(
-          true,
-          metricName,
-          value.asInstanceOf[Double],
-          StandardUnit.None,
-          dimensionGauge,
-          metricData
-        )
-      )
+
+    Option(gauge.getValue) match {
+      case Some(s) => s match {
+        case num: java.lang.Number => stageMetricDatum(true, metricName, num.doubleValue(), StandardUnit.None, dimensionGauge, metricData)
+        case _ => logger.warn("Can't report a non-numeric value.")
+      }
+      case None => logger.warn("No value to report")
+    }
+
   }
 
   private def processCounter(
