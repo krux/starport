@@ -9,7 +9,7 @@ import com.amazonaws.services.cloudwatch.model.Dimension
 case class DimensionedName(name: String, dimensions: Map[String, Dimension]) {
 
   def withDimension(name: String, value: String): DimensionedNameBuilder =
-    DimensionedNameBuilder(this.name, new HashMap() ++ this.dimensions)
+   new DimensionedNameBuilder(this.name, new HashMap() ++ this.dimensions)
       .withDimension(name, value)
 
   def getDimensions(): Set[Dimension] = dimensions.values.toSet
