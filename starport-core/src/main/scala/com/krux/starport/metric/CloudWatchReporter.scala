@@ -1,6 +1,7 @@
 package com.krux.starport.metric
 
 import java.util._
+import java.util.{SortedMap => JSortedMap}
 import java.util.concurrent.{ConcurrentHashMap, Future, TimeUnit}
 
 import scala.collection.JavaConverters._
@@ -65,11 +66,11 @@ class CloudWatchReporter private (builder: Builder)
   private val highResolution: Boolean = builder.highResolution
 
   override def report(
-    gauges: java.util.SortedMap[String, Gauge[_]],
-    counters: java.util.SortedMap[String, Counter],
-    histograms: java.util.SortedMap[String, Histogram],
-    meters: java.util.SortedMap[String, Meter],
-    timers: java.util.SortedMap[String, Timer]
+    gauges: JSortedMap[String, Gauge[_]],
+    counters: JSortedMap[String, Counter],
+    histograms: JSortedMap[String, Histogram],
+    meters: JSortedMap[String, Meter],
+    timers: JSortedMap[String, Timer]
   ): Unit = {
 
     if (builder.dryRun) {
