@@ -73,9 +73,6 @@ class CloudWatchReporter private (builder: Builder)
     timers: JSortedMap[String, Timer]
   ): Unit = {
 
-    if (builder.dryRun) {
-      logger.warn("** Reporter is running in 'DRY RUN' mode **")
-    }
     try {
       val metricData: List[MetricDatum] = new ArrayList[MetricDatum](
         gauges.size + counters.size + 10 * histograms.size + 10 * timers.size
@@ -112,13 +109,7 @@ class CloudWatchReporter private (builder: Builder)
         val putMetricDataRequest: PutMetricDataRequest = new PutMetricDataRequest()
           .withNamespace(namespace)
           .withMetricData(partition)
-        if (builder.dryRun) {
-          if (logger.isDebugEnabled) {
-            logger.debug("Dry run - constructed PutMetricDataRequest: {}", putMetricDataRequest)
-          }
-        } else {
           cloudWatchFutures.add(cloudWatchAsyncClient.putMetricDataAsync(putMetricDataRequest))
-        }
       })
 
       cloudWatchFutures.forEach(cloudWatchFuture => {
@@ -151,7 +142,7 @@ class CloudWatchReporter private (builder: Builder)
     catch {
       case e: Exception => logger.error("Error when stopping the reporter.", e)
 
-    } finally if (!builder.dryRun) {
+    } finally {
       try cloudWatchAsyncClient.shutdown()
       catch {
         case e: Exception =>
@@ -593,7 +584,6 @@ object CloudWatchReporter {
     var meanRate: Boolean = _
     var arithmeticMean: Boolean = _
     var stdDev: Boolean = _
-    var dryRun: Boolean = _
     var zeroValuesSubmission: Boolean = _
     var statisticSet: Boolean = _
     var jvmMetrics: Boolean = _
@@ -762,17 +752,6 @@ object CloudWatchReporter {
      */
     def withJvmMetrics(): Builder = {
       jvmMetrics = true
-      this
-    }
-
-    /**
-     * Does not actually POST to CloudWatch, logs the {@link PutMetricDataRequest putMetricDataRequest} instead.
-     * {@code false} by default.
-     *
-     * @return {@code this}
-     */
-    def withDryRun(): Builder = {
-      dryRun = true
       this
     }
 
