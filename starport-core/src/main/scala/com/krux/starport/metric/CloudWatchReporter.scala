@@ -42,7 +42,7 @@ import com.krux.starport.metric.CloudWatchReporter._
 class CloudWatchReporter private (builder: Builder)
     extends ScheduledReporter(
       builder.metricRegistry,
-      "coda-hale-metrics-cloud-watch-reporter",
+      "starport-cloudwatch-reporter",
       builder.metricFilter,
       builder.rateUnit,
       builder.durationUnit
