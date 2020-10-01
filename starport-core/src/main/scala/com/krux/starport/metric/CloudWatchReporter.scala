@@ -1,10 +1,20 @@
 package com.krux.starport.metric
 
-import java.util._
-import java.util.{SortedMap => JSortedMap}
+import java.util.{
+  ArrayList => JArrayList,
+  Date => JDate,
+  Iterator => JIterator,
+  LinkedHashSet => JLinkedHashSet,
+  List => JList,
+  Map => JMap,
+  Optional => JOption,
+  Set => JSet,
+  SortedMap => JSortedMap
+}
 import java.util.concurrent.{ConcurrentHashMap, Future, TimeUnit}
 
 import scala.collection.JavaConverters._
+
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchAsync
 import com.amazonaws.services.cloudwatch.model.{
   Dimension,
@@ -53,7 +63,7 @@ class CloudWatchReporter private (builder: Builder)
    * We only submit the difference in counters since the last submission. This way we don't have to reset
    * the counters within this application.
    */
-  private val lastPolledCounts: Map[Counting, Long] = new ConcurrentHashMap()
+  private val lastPolledCounts: JMap[Counting, Long] = new ConcurrentHashMap()
 
   private val namespace: String = builder.namespace
 
@@ -74,7 +84,7 @@ class CloudWatchReporter private (builder: Builder)
   ): Unit = {
 
     try {
-      val metricData: List[MetricDatum] = new ArrayList[MetricDatum](
+      val metricData: JList[MetricDatum] = new JArrayList[MetricDatum](
         gauges.size + counters.size + 10 * histograms.size + 10 * timers.size
       )
       gauges.forEach { case (k: String, v: Gauge[_]) => processGauge(k, v, metricData) }
@@ -100,12 +110,16 @@ class CloudWatchReporter private (builder: Builder)
         }
       }
 
-      val metricDataPartitions: Collection[List[MetricDatum]] =
-        CollectionsUtils.partition(metricData, maximumDatumsPerRequest)
-      val cloudWatchFutures: List[Future[PutMetricDataResult]] =
-        new ArrayList[Future[PutMetricDataResult]](metricData.size)
+      val metricDataPartitions: JIterator[JList[MetricDatum]] = metricData
+        .asScala
+        .grouped(maximumDatumsPerRequest)
+        .map(_.asJava)
+        .asJava
 
-      metricDataPartitions.forEach(partition => {
+      val cloudWatchFutures: JList[Future[PutMetricDataResult]] =
+        new JArrayList[Future[PutMetricDataResult]](metricData.size)
+
+      metricDataPartitions.forEachRemaining(partition => {
         val putMetricDataRequest: PutMetricDataRequest = new PutMetricDataRequest()
           .withNamespace(namespace)
           .withMetricData(partition)
@@ -155,7 +169,7 @@ class CloudWatchReporter private (builder: Builder)
   private def processGauge(
     metricName: String,
     gauge: Gauge[_],
-    metricData: List[MetricDatum]
+    metricData: JList[MetricDatum]
   ): Unit = {
 
     Option(gauge.getValue) match {
@@ -171,7 +185,7 @@ class CloudWatchReporter private (builder: Builder)
   private def processCounter(
     metricName: String,
     counter: Counting,
-    metricData: List[MetricDatum]
+    metricData: JList[MetricDatum]
   ): Unit = {
     val currentCount: Long = counter.getCount
     var lastCount: java.lang.Long = lastPolledCounts.get(counter)
@@ -197,7 +211,7 @@ class CloudWatchReporter private (builder: Builder)
   private def processMeter(
     metricName: String,
     meter: Metered,
-    metricData: List[MetricDatum]
+    metricData: JList[MetricDatum]
   ): Unit = {
     val formattedRate: String = String.format("-rate [per-%s]", getRateUnit)
     stageMetricDatum(
@@ -253,7 +267,7 @@ class CloudWatchReporter private (builder: Builder)
   private def processTimer(
     metricName: String,
     timer: Timer,
-    metricData: List[MetricDatum]
+    metricData: JList[MetricDatum]
   ): Unit = {
     val snapshot: Snapshot = timer.getSnapshot
     if (builder.zeroValuesSubmission || snapshot.size > 0) {
@@ -316,7 +330,7 @@ class CloudWatchReporter private (builder: Builder)
   private def processHistogram(
     metricName: String,
     histogram: Histogram,
-    metricData: List[MetricDatum]
+    metricData: JList[MetricDatum]
   ): Unit = {
     val snapshot: Snapshot = histogram.getSnapshot
     if (builder.zeroValuesSubmission || snapshot.size > 0) {
@@ -375,12 +389,12 @@ class CloudWatchReporter private (builder: Builder)
     metricValue: Double,
     standardUnit: StandardUnit,
     dimensionValue: String,
-    metricData: List[MetricDatum]
+    metricData: JList[MetricDatum]
   ): Unit = {
 // Only submit metrics that show some data, so let's save some money
     if (metricConfigured && (builder.zeroValuesSubmission || metricValue > 0)) {
       val dimensionedName: DimensionedName = DimensionedName.decode(metricName)
-      val dimensions: Set[Dimension] = new LinkedHashSet[Dimension](builder.globalDimensions)
+      val dimensions: JSet[Dimension] = new JLinkedHashSet[Dimension](builder.globalDimensions)
 
       dimensions.add(
         new Dimension()
@@ -392,7 +406,7 @@ class CloudWatchReporter private (builder: Builder)
 
       metricData.add(
         new MetricDatum()
-          .withTimestamp(new Date(builder.clock.getTime))
+          .withTimestamp(new JDate(builder.clock.getTime))
           .withValue(cleanMetricValue(metricValue))
           .withMetricName(dimensionedName.name)
           .withDimensions(dimensions)
@@ -410,7 +424,7 @@ class CloudWatchReporter private (builder: Builder)
     metricName: String,
     snapshot: Snapshot,
     standardUnit: StandardUnit,
-    metricData: List[MetricDatum]
+    metricData: JList[MetricDatum]
   ): Unit = {
 
     if (metricConfigured) {
@@ -423,8 +437,7 @@ class CloudWatchReporter private (builder: Builder)
         .withMinimum(convertDuration(snapshot.getMin))
         .withMaximum(convertDuration(snapshot.getMax))
 
-      val dimensions: Set[Dimension] =
-        new LinkedHashSet[Dimension](builder.globalDimensions)
+      val dimensions: JSet[Dimension] = new JLinkedHashSet[Dimension](builder.globalDimensions)
       dimensions.add(
         new Dimension()
           .withName(dimensionNameType)
@@ -434,7 +447,7 @@ class CloudWatchReporter private (builder: Builder)
       dimensions.addAll(dimensionedName.getDimensions.asJavaCollection)
       metricData.add(
         new MetricDatum()
-          .withTimestamp(new Date(builder.clock.getTime))
+          .withTimestamp(new JDate(builder.clock.getTime))
           .withMetricName(dimensionedName.name)
           .withDimensions(dimensions)
           .withStatisticValues(statisticSet)
@@ -453,7 +466,7 @@ class CloudWatchReporter private (builder: Builder)
     metricName: String,
     snapshot: Snapshot,
     standardUnit: StandardUnit,
-    metricData: List[MetricDatum]
+    metricData: JList[MetricDatum]
   ): Unit = {
     if (metricConfigured) {
       val dimensionedName: DimensionedName = DimensionedName.decode(metricName)
@@ -465,7 +478,7 @@ class CloudWatchReporter private (builder: Builder)
         .withMinimum(snapshot.getMin.toDouble)
         .withMaximum(snapshot.getMax.toDouble)
 
-      val dimensions: Set[Dimension] = new LinkedHashSet[Dimension](builder.globalDimensions)
+      val dimensions: JSet[Dimension] = new JLinkedHashSet[Dimension](builder.globalDimensions)
 
       dimensions.add(
         new Dimension()
@@ -477,7 +490,7 @@ class CloudWatchReporter private (builder: Builder)
 
       metricData.add(
         new MetricDatum()
-          .withTimestamp(new Date(builder.clock.getTime))
+          .withTimestamp(new JDate(builder.clock.getTime))
           .withMetricName(dimensionedName.name)
           .withDimensions(dimensions)
           .withStatisticValues(statisticSet)
@@ -591,10 +604,10 @@ object CloudWatchReporter {
     var metricFilter: MetricFilter = MetricFilter.ALL
     var rateUnit: TimeUnit = TimeUnit.SECONDS
     var durationUnit: TimeUnit = TimeUnit.MILLISECONDS
-    var cwMeterUnit: Optional[StandardUnit] = Optional.empty()
+    var cwMeterUnit: JOption[StandardUnit] = JOption.empty()
     var cwRateUnit: StandardUnit = toStandardUnit(rateUnit)
     var cwDurationUnit: StandardUnit = toStandardUnit(durationUnit)
-    var globalDimensions: Set[Dimension] = new LinkedHashSet()
+    var globalDimensions: JSet[Dimension] = new JLinkedHashSet()
     val clock: Clock = Clock.defaultClock()
     var highResolution: Boolean = _
 
@@ -815,7 +828,7 @@ object CloudWatchReporter {
 
       for (pair <- dimensions) {
 
-        val splitted: List[String] = pair
+        val splitted: JList[String] = pair
           .split("=")
           .toStream
           .map(_.trim)
@@ -841,7 +854,7 @@ object CloudWatchReporter {
      * @return {@code this}
      */
     def withMeterUnitSentToCW(reportUnit: StandardUnit): Builder = {
-      this.cwMeterUnit = Optional.of(reportUnit)
+      this.cwMeterUnit = JOption.of(reportUnit)
       this
     }
 
