@@ -599,7 +599,6 @@ object CloudWatchReporter {
     var stdDev: Boolean = _
     var zeroValuesSubmission: Boolean = _
     var statisticSet: Boolean = _
-    var jvmMetrics: Boolean = _
     var reportRawCountValue: Boolean = _
     var metricFilter: MetricFilter = MetricFilter.ALL
     var rateUnit: TimeUnit = TimeUnit.SECONDS
@@ -747,24 +746,6 @@ object CloudWatchReporter {
      */
     def withStatisticSet(): Builder = {
       statisticSet = true
-      this
-    }
-
-    /**
-     * If JVM statistic should be reported. Supported metrics include:
-     * <p>
-     * - Run count and elapsed times for all supported garbage collectors
-     * - Memory usage for all memory pools, including off-heap memory
-     * - Breakdown of thread states, including deadlocks
-     * - File descriptor usage
-     * - Buffer pool sizes and utilization (Java 7 only)
-     * <p>
-     * {@code false} by default.
-     *
-     * @return {@code this}
-     */
-    def withJvmMetrics(): Builder = {
-      jvmMetrics = true
       this
     }
 
