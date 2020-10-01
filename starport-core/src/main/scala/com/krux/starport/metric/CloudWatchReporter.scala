@@ -402,13 +402,13 @@ class CloudWatchReporter private (builder: Builder)
           .withValue(dimensionValue)
       )
 
-      dimensions.addAll(dimensionedName.getDimensions().asJavaCollection)
+      dimensions.addAll(dimensionedName.getDimensions.asJavaCollection)
 
       metricData.add(
         new MetricDatum()
           .withTimestamp(new JDate(builder.clock.getTime))
           .withValue(cleanMetricValue(metricValue))
-          .withMetricName(dimensionedName.name)
+          .withMetricName(dimensionedName.getName)
           .withDimensions(dimensions)
           .withStorageResolution(
             if (highResolution) highResolutionFrequency
@@ -448,7 +448,7 @@ class CloudWatchReporter private (builder: Builder)
       metricData.add(
         new MetricDatum()
           .withTimestamp(new JDate(builder.clock.getTime))
-          .withMetricName(dimensionedName.name)
+          .withMetricName(dimensionedName.getName)
           .withDimensions(dimensions)
           .withStatisticValues(statisticSet)
           .withStorageResolution(
@@ -486,12 +486,12 @@ class CloudWatchReporter private (builder: Builder)
           .withValue(dimensionSnapshotSummary)
       )
 
-      dimensions.addAll(dimensionedName.getDimensions().asJavaCollection)
+      dimensions.addAll(dimensionedName.getDimensions.asJavaCollection)
 
       metricData.add(
         new MetricDatum()
           .withTimestamp(new JDate(builder.clock.getTime))
-          .withMetricName(dimensionedName.name)
+          .withMetricName(dimensionedName.getName)
           .withDimensions(dimensions)
           .withStatisticValues(statisticSet)
           .withStorageResolution(if (highResolution) highResolutionFrequency else standardResolutionFrequency)
