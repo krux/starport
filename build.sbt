@@ -21,7 +21,6 @@ val metricsGraphite        = "io.dropwizard.metrics"  %  "metrics-graphite"     
 val postgreSqlJdbc         = "org.postgresql"         %  "postgresql"           % "42.2.16"
 val awsLambdaEvents        = "com.amazonaws"          %  "aws-lambda-java-events" % "3.2.0"
 val awsLambdaCore          = "com.amazonaws"          %  "aws-lambda-java-core"   % "1.2.1"
-val cloudwatchMetrics      = "io.github.azagniotov"   %  "dropwizard-metrics-cloudwatch" % "1.0.13"
 val akkaActorArtifact      = "com.typesafe.akka"      %% "akka-actor-typed" % akkaVersion
 
 lazy val commonSettings = Seq(
@@ -64,7 +63,6 @@ lazy val core = (project in file("starport-core")).
       stubbornArtifact,
       metricsGraphite,
       postgreSqlJdbc,
-      cloudwatchMetrics,
       akkaActorArtifact
     ),
     fork := true
