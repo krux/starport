@@ -69,5 +69,13 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
       .map(f => s"${f.getAbsolutePath}: ${f.length()}")
       .mkString("\n")
   }
+
+  /**
+   * @return delete the /tmp directory
+   */
+  private def deleteTmpFIles(): Unit = {
+    new File("/tmp")
+      .delete
+  }
 }
 
