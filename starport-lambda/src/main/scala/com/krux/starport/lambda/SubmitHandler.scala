@@ -9,15 +9,14 @@ import com.krux.starport.db.tool.SubmitPipeline
 import com.krux.starport.util.LambdaExitException
 
 /**
-  * Lambda to invoke the com.krux.starport.db.tool.SubmitPipeline util remotely.
-  *
-  * Property configuration for lambda (pass via JAVA_TOOL_OPTIONS env var):
-  *
-  * -Dstarport.config.url=s3://{your-bucket}/starport/starport.conf
-  * -Dlogger.root.level=DEBUG|INFO|...
-  * -Dexecution.context=lambda
-  *
-  */
+ * Lambda to invoke the com.krux.starport.db.tool.SubmitPipeline util remotely.
+ *
+ * Property configuration for lambda (pass via JAVA_TOOL_OPTIONS env var):
+ *
+ * -Dstarport.config.url=s3://{your-bucket}/starport/starport.conf
+ * -Dlogger.root.level=DEBUG|INFO|...
+ * -Dexecution.context=lambda
+ */
 class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with Logging {
   val outCapture = new ByteArrayOutputStream
   val errCapture = new ByteArrayOutputStream
@@ -33,31 +32,42 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
     var outString = ""
     var errString = ""
 
-    try {
-      SubmitPipeline.main(input.getArgs)
-    } catch {
-      case caughtExit: LambdaExitException => {
-        status = caughtExit.status
-        logger.error("exit:", caughtExit)
-        logger.error(scanTmpFiles())
-      }
-      case unhandled: Throwable =>  {
+    val args: Array[String] = input.getArgs
+
+    args.head match {
+      case "deleteTmpDir" => {
         status = 255
-        logger.error("exception:", unhandled)
-        logger.error(scanTmpFiles())
+        logger.error("received call to delete /tmp")
+        logger.error(deleteTmpDir())
       }
-    } finally {
-      outPrintStream.flush()
-      errPrintStream.flush()
-      outString = outCapture.toString
-      errString = errCapture.toString
-      outCapture.reset()
-      errCapture.reset()
-      lambdaOut.print(outString)
-      lambdaErr.print(errString)
+      case _ =>
+        try {
+          SubmitPipeline.main(args)
+        } catch {
+          case caughtExit: LambdaExitException => {
+            status = caughtExit.status
+            logger.error("exit:", caughtExit)
+            logger.error(scanTmpFiles())
+          }
+          case unhandled: Throwable => {
+            status = 255
+            logger.error("exception:", unhandled)
+            logger.error(scanTmpFiles())
+          }
+        } finally {
+          outPrintStream.flush()
+          errPrintStream.flush()
+          outString = outCapture.toString
+          errString = errCapture.toString
+          outCapture.reset()
+          errCapture.reset()
+          lambdaOut.print(outString)
+          lambdaErr.print(errString)
+        }
     }
 
     SubmitResponse(outString, errString, status, input)
+
   }
 
   /**
@@ -73,9 +83,8 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
   /**
    * @return delete the /tmp directory
    */
-  private def deleteTmpFIles(): Unit = {
-    new File("/tmp")
-      .delete
+  private def deleteTmpDir(): String = {
+    new File("/tmp").delete
+    "/tmp directory deleted"
   }
 }
-
