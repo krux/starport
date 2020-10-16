@@ -34,15 +34,15 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
 
     val args: Array[String] = input.getArgs
 
-    args.head match {
-      case "deleteTmpDir" => {
-        status = 255
-        logger.error("received call to delete /tmp")
-        logger.error(deleteTmpDir())
-      }
-      case _ =>
         try {
-          SubmitPipeline.main(args)
+          args.head match {
+            case "deleteTmpDir" => {
+              status = 255
+              logger.error("received call to delete /tmp")
+              logger.error(deleteTmpDir())
+            }
+            case _ => SubmitPipeline.main(args)
+          }
         } catch {
           case caughtExit: LambdaExitException => {
             status = caughtExit.status
@@ -54,19 +54,18 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
             logger.error("exception:", unhandled)
             logger.error(scanTmpFiles())
           }
-        } finally {
-          outPrintStream.flush()
-          errPrintStream.flush()
-          outString = outCapture.toString
-          errString = errCapture.toString
-          outCapture.reset()
-          errCapture.reset()
-          lambdaOut.print(outString)
-          lambdaErr.print(errString)
-        }
-    }
+          } finally {
+            outPrintStream.flush()
+            errPrintStream.flush()
+            outString = outCapture.toString
+            errString = errCapture.toString
+            outCapture.reset()
+            errCapture.reset()
+            lambdaOut.print(outString)
+            lambdaErr.print(errString)
+          }
 
-    SubmitResponse(outString, errString, status, input)
+          SubmitResponse(outString, errString, status, input)
 
   }
 
