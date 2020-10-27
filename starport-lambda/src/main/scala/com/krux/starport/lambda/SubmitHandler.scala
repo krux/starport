@@ -38,7 +38,7 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
           args.head match {
             case "deleteTmpDir" => {
               status = 255
-              logger.error("received call to delete /tmp")
+              logger.error("received call to delete /tmp/.starport")
               logger.error(deleteTmpDir())
             }
             case _ => SubmitPipeline.main(args)
@@ -73,7 +73,7 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
    * @return /tmp file listing with size for troubleshooting purposes
    */
   private def scanTmpFiles(): String = {
-    new File("/tmp")
+    new File("/tmp/.starport")
       .listFiles()
       .map(f => s"${f.getAbsolutePath}: ${f.length()}")
       .mkString("\n")
@@ -83,7 +83,7 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
    * @return delete the /tmp directory
    */
   private def deleteTmpDir(): String = {
-    new File("/tmp").delete
-    "/tmp directory deleted"
+    new File("/tmp/.starport").delete
+    "/tmp/.starport directory deleted"
   }
 }
