@@ -3,8 +3,8 @@ package com.krux.starport.lambda
 import java.io.{ByteArrayOutputStream, File, PrintStream}
 
 import com.amazonaws.services.lambda.runtime.{Context, RequestHandler}
-
 import com.krux.starport.Logging
+import com.krux.starport.config.StarportSettings
 import com.krux.starport.db.tool.SubmitPipeline
 import com.krux.starport.util.LambdaExitException
 
@@ -83,7 +83,8 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
    * @return delete the /tmp directory
    */
   private def deleteTmpDir(): String = {
-    new File("/tmp/.starport").delete
-    "/tmp/.starport directory deleted"
+    val config = StarportSettings()
+    new File(config.tmpDirectory).delete
+    s"${config.tmpDirectory} directory deleted."
   }
 }
