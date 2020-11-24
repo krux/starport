@@ -4,7 +4,6 @@ import java.io.{ByteArrayOutputStream, File, PrintStream}
 
 import com.amazonaws.services.lambda.runtime.{Context, RequestHandler}
 import com.krux.starport.Logging
-import com.krux.starport.config.StarportSettings
 import com.krux.starport.db.tool.SubmitPipeline
 import com.krux.starport.util.LambdaExitException
 
@@ -26,6 +25,7 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
   val lambdaErr = System.err
   System.setErr(errPrintStream)
   System.setOut(outPrintStream)
+  final val tmpDirectory = "/tmp/starport"
 
   def handleRequest(input: SubmitRequest, context: Context): SubmitResponse = {
     var status: Int = 0
@@ -38,7 +38,7 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
           args.head match {
             case "deleteTmpDir" => {
               status = 255
-              logger.error("received call to delete /tmp/.starport")
+              logger.error(s"received call to delete ${tmpDirectory}")
               logger.error(deleteTmpDir())
             }
             case _ => SubmitPipeline.main(args)
@@ -73,7 +73,7 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
    * @return /tmp file listing with size for troubleshooting purposes
    */
   private def scanTmpFiles(): String = {
-    new File("/tmp/.starport")
+    new File(tmpDirectory)
       .listFiles()
       .map(f => s"${f.getAbsolutePath}: ${f.length()}")
       .mkString("\n")
@@ -83,8 +83,7 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
    * @return delete the /tmp directory
    */
   private def deleteTmpDir(): String = {
-    val config = StarportSettings()
-    new File(config.tmpDirectory).delete
-    s"${config.tmpDirectory} directory deleted."
+    new File(tmpDirectory).delete
+    s"${tmpDirectory} deleted."
   }
 }

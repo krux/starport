@@ -66,8 +66,6 @@ class StarportSettings(val config: Config) extends Serializable {
   else {
     config.getString("krux.starport.notification.sns")
   }
-
-  val tmpDirectory: String = if (config.hasPath("krux.starport.temp.directory")) config.getString("krux.starport.temp.directory") else "/tmp/starport"
 }
 
 object StarportSettings {
