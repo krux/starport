@@ -25,7 +25,7 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
   val lambdaErr = System.err
   System.setErr(errPrintStream)
   System.setOut(outPrintStream)
-  final val tmpDirectory = "/tmp/starport"
+  final val TmpDirectory = "/tmp/starport"
 
   def handleRequest(input: SubmitRequest, context: Context): SubmitResponse = {
     var status: Int = 0

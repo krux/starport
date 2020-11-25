@@ -9,7 +9,7 @@ import com.krux.starport.Logging
 object S3FileHandler extends Logging {
 
   val bufferSize = 1024
-  final val tmpDirectory = "/tmp/starport"
+  final val TmpDirectory = "/tmp/starport"
 
   def getTempDirectory(baseDir: Option[String]): File = {
     if (Lambda.isLambda()) {
