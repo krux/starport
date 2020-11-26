@@ -5,7 +5,7 @@ import java.io.{ByteArrayOutputStream, File, PrintStream}
 import com.amazonaws.services.lambda.runtime.{Context, RequestHandler}
 import com.krux.starport.Logging
 import com.krux.starport.db.tool.SubmitPipeline
-import com.krux.starport.util.LambdaExitException
+import com.krux.starport.util.{LambdaExitException, S3FileHandler}
 
 /**
  * Lambda to invoke the com.krux.starport.db.tool.SubmitPipeline util remotely.
@@ -25,7 +25,6 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
   val lambdaErr = System.err
   System.setErr(errPrintStream)
   System.setOut(outPrintStream)
-  final val TmpDirectory = "/tmp/starport"
 
   def handleRequest(input: SubmitRequest, context: Context): SubmitResponse = {
     var status: Int = 0
@@ -38,7 +37,7 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
           args.head match {
             case "deleteTmpDir" => {
               status = 255
-              logger.error(s"received call to delete ${tmpDirectory}")
+              logger.error(s"received call to delete ${S3FileHandler.TmpDirectory}")
               logger.error(deleteTmpDir())
             }
             case _ => SubmitPipeline.main(args)
@@ -73,7 +72,7 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
    * @return /tmp file listing with size for troubleshooting purposes
    */
   private def scanTmpFiles(): String = {
-    new File(tmpDirectory)
+    new File(S3FileHandler.TmpDirectory)
       .listFiles()
       .map(f => s"${f.getAbsolutePath}: ${f.length()}")
       .mkString("\n")
@@ -83,7 +82,7 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
    * @return delete the /tmp directory
    */
   private def deleteTmpDir(): String = {
-    new File(tmpDirectory).delete
-    s"${tmpDirectory} deleted."
+    new File(S3FileHandler.TmpDirectory).delete
+    s"${S3FileHandler.TmpDirectory} deleted."
   }
 }

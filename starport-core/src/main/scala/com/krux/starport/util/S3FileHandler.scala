@@ -13,7 +13,7 @@ object S3FileHandler extends Logging {
 
   def getTempDirectory(baseDir: Option[String]): File = {
     if (Lambda.isLambda()) {
-      new File(tmpDirectory)
+      new File(TmpDirectory)
     } else {
       // TODO change this to "/mnt/tmp/starport"
       // and delete the file afterwards
