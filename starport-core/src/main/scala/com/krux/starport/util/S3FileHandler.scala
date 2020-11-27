@@ -4,17 +4,16 @@ import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.net.URI
 
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
-
 import com.krux.starport.Logging
-
 
 object S3FileHandler extends Logging {
 
   val bufferSize = 1024
+  final val TmpDirectory = "/tmp/starport"
 
   def getTempDirectory(baseDir: Option[String]): File = {
     if (Lambda.isLambda()) {
-      new File("/tmp")
+      new File(TmpDirectory)
     } else {
       // TODO change this to "/mnt/tmp/starport"
       // and delete the file afterwards
