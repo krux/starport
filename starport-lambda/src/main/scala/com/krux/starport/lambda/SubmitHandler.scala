@@ -33,38 +33,36 @@ class SubmitHandler extends RequestHandler[SubmitRequest, SubmitResponse] with L
 
     val args: Array[String] = input.getArgs
 
-        try {
-          args.head match {
-            case "deleteTmpDir" => {
-              status = 255
-              logger.error(s"received call to delete ${S3FileHandler.TmpDirectory}")
-              logger.error(deleteTmpDir())
-            }
-            case _ => SubmitPipeline.main(args)
-          }
-        } catch {
-          case caughtExit: LambdaExitException => {
-            status = caughtExit.status
-            logger.error("exit:", caughtExit)
-            logger.error(scanTmpFiles())
-          }
-          case unhandled: Throwable => {
-            status = 255
-            logger.error("exception:", unhandled)
-            logger.error(scanTmpFiles())
-          }
-          } finally {
-            outPrintStream.flush()
-            errPrintStream.flush()
-            outString = outCapture.toString
-            errString = errCapture.toString
-            outCapture.reset()
-            errCapture.reset()
-            lambdaOut.print(outString)
-            lambdaErr.print(errString)
-          }
+    try {
+      args.head match {
+        case "deleteTmpDir" =>
+          status = 255
+          logger.error(s"received call to delete ${S3FileHandler.TmpDirectory}")
+          logger.error(deleteTmpDir())
+        case _ =>
+          SubmitPipeline.main(args)
+      }
+    } catch {
+      case caughtExit: LambdaExitException =>
+        status = caughtExit.status
+        logger.error("exit:", caughtExit)
+        logger.error(scanTmpFiles())
+      case unhandled: Throwable =>
+        status = 255
+        logger.error("exception:", unhandled)
+        logger.error(scanTmpFiles())
+    } finally {
+      outPrintStream.flush()
+      errPrintStream.flush()
+      outString = outCapture.toString
+      errString = errCapture.toString
+      outCapture.reset()
+      errCapture.reset()
+      lambdaOut.print(outString)
+      lambdaErr.print(errString)
+    }
 
-          SubmitResponse(outString, errString, status, input)
+    SubmitResponse(outString, errString, status, input)
 
   }
 

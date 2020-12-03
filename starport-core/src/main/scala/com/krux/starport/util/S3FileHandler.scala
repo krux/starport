@@ -12,15 +12,15 @@ object S3FileHandler extends Logging {
   final val TmpDirectory = "/tmp/starport"
 
   def getTempDirectory(baseDir: Option[String]): File = {
-    if (Lambda.isLambda()) {
-      new File(TmpDirectory)
-    } else {
-      // TODO change this to "/mnt/tmp/starport"
-      // and delete the file afterwards
-      val tempDir = new File(baseDir.getOrElse(s"${System.getProperty("user.home")}/.starport"))
-      if (!tempDir.exists()) tempDir.mkdir()
-      tempDir
-    }
+    val tempDir =
+      if (Lambda.isLambda())
+        new File(TmpDirectory)
+      else
+        new File(baseDir.getOrElse(s"${System.getProperty("user.home")}/.starport"))
+
+    if (!tempDir.exists()) tempDir.mkdirs()
+
+    tempDir
   }
 
   def getFileFromS3(s3spec: String, baseDir: Option[String] = None): File = {
@@ -30,7 +30,8 @@ object S3FileHandler extends Logging {
 
     val bucket = s3Uri.getHost()
     val key = s3Uri.getPath().stripPrefix("/")
-    val localFile = File.createTempFile("starport_", "_" + key.split('/').last, getTempDirectory(baseDir))
+    val localFile =
+      File.createTempFile("starport_", "_" + key.split('/').last, getTempDirectory(baseDir))
 
     logger.info(s"Downloading $s3spec to ${localFile.getAbsolutePath()}")
 
