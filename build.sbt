@@ -1,8 +1,8 @@
-val awsSdkVersion = "1.11.887"
+val awsSdkVersion = "1.11.943"
 val slickVersion = "3.3.3"
-val akkaVersion = "2.6.10"
+val akkaVersion = "2.6.11"
 
-val scalaTestArtifact      = "org.scalatest"          %% "scalatest"            % "3.2.2" % Test
+val scalaTestArtifact      = "org.scalatest"          %% "scalatest"            % "3.2.3" % Test
 val slickArtifact          = "com.typesafe.slick"     %% "slick"                % slickVersion
 val slickHikaricpArtifact  = "com.typesafe.slick"     %% "slick-hikaricp"       % slickVersion
 val scoptArtifact          = "com.github.scopt"       %% "scopt"                % "3.7.1"
@@ -16,18 +16,26 @@ val awsSdkSES              = "com.amazonaws"          %  "aws-java-sdk-ses"     
 val awsSdkSSM              = "com.amazonaws"          %  "aws-java-sdk-ssm"     % awsSdkVersion
 val awsSdkSNS              = "com.amazonaws"          %  "aws-java-sdk-sns"     % awsSdkVersion
 val awsSdkCloudWatch       = "com.amazonaws"          %  "aws-java-sdk-cloudwatch"     % awsSdkVersion
-val metricsGraphite        = "io.dropwizard.metrics"  %  "metrics-graphite"     % "4.1.14"
+val metricsGraphite        = "io.dropwizard.metrics"  %  "metrics-graphite"     % "4.1.17"
 val postgreSqlJdbc         = "org.postgresql"         %  "postgresql"           % "42.2.18"
-val awsLambdaEvents        = "com.amazonaws"          %  "aws-lambda-java-events" % "3.4.0"
+val awsLambdaEvents        = "com.amazonaws"          %  "aws-lambda-java-events" % "3.7.0"
 val awsLambdaCore          = "com.amazonaws"          %  "aws-lambda-java-core"   % "1.2.1"
 val akkaActorArtifact      = "com.typesafe.akka"      %% "akka-actor-typed" % akkaVersion
 
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq("-deprecation", "-feature", "-Xlint", "-Xfatal-warnings"),
-  scalaVersion := "2.12.12",
+  scalaVersion := "2.12.13",
   libraryDependencies += scalaTestArtifact,
   organization := "com.krux",
   test in assembly := {},  // skip test during assembly
+  assemblyMergeStrategy in assembly := {
+    // scala 2.12.13 also introduces the nowarn.class in scala-compat
+    case PathList(ps @ _*) if Set("nowarn$.class", "nowarn.class").contains(ps.last) =>
+      MergeStrategy.first
+    case x =>
+      val oldStrategy = (assemblyMergeStrategy in assembly).value
+      oldStrategy(x)
+  },
   publishMavenStyle := true
 )
 
