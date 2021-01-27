@@ -70,8 +70,9 @@ class DispatcherActor(context: ActorContext[DispatcherActor.Msg], starportSettin
       // TODO it would be more moduler if this is done in a separate actor
       result match {
         case Left(ex) =>
+          context.log.warn(s"failed to deploy pipeline ${pipeline.name} error: ${ex.getMessage()}")
           context.log.warn(s"failed to deploy pipeline ${pipeline.name}, handling error...")
-          ErrorHandler.pipelineScheduleFailed(pipeline, ex.getMessage)(
+          ErrorHandler.pipelineScheduleFailed(pipeline, ex.getMessage())(
             starportSetting,
             context.executionContext
           )
