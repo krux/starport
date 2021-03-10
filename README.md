@@ -1,3 +1,5 @@
+# Note Starport is now migrated to [salesforce](https://github.com/salesforce/starport) repository, all new updates will be hosted there.
+
 # Starport
 
 [![Build Status](https://travis-ci.org/krux/starport.svg?branch=master)](https://travis-ci.org/krux/starport)
